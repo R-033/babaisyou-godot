@@ -32,6 +32,9 @@ func _ready():
 			worldGrid[x].append([])
 	
 	spawnTile(7, 7, 0, "baba")
+	spawnTile(7, 5, 0, "baba")
+	spawnTile(7, 3, 0, "baba")
+	spawnTile(10, 6, 0, "baba")
 	spawnTile(9, 6, 0, "baba_obj")
 	spawnTile(9, 7, 0, "is_op")
 	spawnTile(9, 8, 0, "you_act")
@@ -122,6 +125,8 @@ func updateWorld(allowMovement = true) -> void:
 	for x in range(worldWidth):
 		for y in range(worldHeight):
 			for i in range(worldGrid[x][y].size()):
+				if (i > worldGrid[x][y].size() - 1):
+					i = 0
 				var tile = worldGrid[x][y][i]
 				if (alreadyFinished.has(tile)):
 					continue
