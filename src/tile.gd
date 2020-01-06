@@ -25,6 +25,7 @@ func updatePos(x, y) -> void:
 		atlasCurrentWalkFrame += 1
 		if (atlasCurrentWalkFrame >= atlasWalkCycle):
 			atlasCurrentWalkFrame = 0
+		direction = 0 if (pos.x == oldPos.x + 1) else 2 if (pos.x == oldPos.x - 1) else 3 if (pos.y == oldPos.y + 1) else 1 if (pos.y == oldPos.y - 1) else direction
 	updateSpriteAnim()
 
 func updateSprite(x, y, walkCycle, color) -> void:
@@ -35,9 +36,7 @@ func updateSprite(x, y, walkCycle, color) -> void:
 	updateSpriteAnim()
 	
 func updateSpriteAnim() -> void:
-	var xpos = atlasX + direction * atlasWalkCycle + atlasCurrentWalkFrame
-	if (direction > 1 && atlasWalkCycle > 1):
-		xpos += 1
+	var xpos = atlasX + direction * (atlasWalkCycle + 1 if atlasWalkCycle > 1 else 0) + atlasCurrentWalkFrame
 	region_rect.position.x = xpos * 24
 	region_rect.position.y = (atlasY + main.worldAnimationFrame) * 24
 	
@@ -49,3 +48,4 @@ func _process(delta):
 		position = oldPos.linear_interpolate(pos, main.worldLerpTime) * 24
 		if (main.worldLerpTime == 1):
 			needsToMove = false
+			oldPos = pos
