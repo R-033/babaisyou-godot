@@ -32,11 +32,14 @@ func updateSprite(x, y, walkCycle, color) -> void:
 	atlasX = x
 	atlasY = y
 	atlasWalkCycle = walkCycle
-	modulate = color
+	updateSpriteColor(color)
 	updateSpriteAnim()
-	
+
+func updateSpriteColor(color) -> void:
+	modulate = color
+
 func updateSpriteAnim() -> void:
-	var xpos = atlasX + direction * (atlasWalkCycle + 1 if atlasWalkCycle > 1 else 0) + atlasCurrentWalkFrame
+	var xpos = atlasX + direction * (atlasWalkCycle + (1 if atlasWalkCycle > 1 else 0)) + atlasCurrentWalkFrame + (1 if atlasWalkCycle > 1 else 0)
 	region_rect.position.x = xpos * 24
 	region_rect.position.y = (atlasY + main.worldAnimationFrame) * 24
 	
