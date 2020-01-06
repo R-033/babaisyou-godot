@@ -21,27 +21,31 @@ func updatePos(x, y) -> void:
 	oldPos = pos
 	pos = newPos
 	needsToMove = true
+	if (oldPos != newPos && main.worldLerpTime != 1):
+		atlasCurrentWalkFrame += 1
+		if (atlasCurrentWalkFrame >= atlasWalkCycle):
+			atlasCurrentWalkFrame = 0
 	updateSpriteAnim()
 
 func updateSprite(x, y, walkCycle, color) -> void:
 	atlasX = x
 	atlasY = y
 	atlasWalkCycle = walkCycle
-	#$sprite.modulate = color
+	modulate = color
 	updateSpriteAnim()
 	
 func updateSpriteAnim() -> void:
-	atlasCurrentWalkFrame += 1
-	if (atlasCurrentWalkFrame >= atlasWalkCycle):
-		atlasCurrentWalkFrame = 0
-	texture.region.position.x = (atlasX + direction * atlasWalkCycle + atlasCurrentWalkFrame) * 24
-	texture.region.position.y = (atlasY + main.worldAnimationFrame) * 24
+	var xpos = atlasX + direction * atlasWalkCycle + atlasCurrentWalkFrame
+	if (direction > 1 && atlasWalkCycle > 1):
+		xpos += 1
+	region_rect.position.x = xpos * 24
+	region_rect.position.y = (atlasY + main.worldAnimationFrame) * 24
 	
 func toggleCross(enable) -> void:
 	pass
 	
 func _process(delta):
 	if (needsToMove):
-		$Sprite.position = oldPos.linear_interpolate(pos, main.worldLerpTime) * 24
+		position = oldPos.linear_interpolate(pos, main.worldLerpTime) * 24
 		if (main.worldLerpTime == 1):
 			needsToMove = false
