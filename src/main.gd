@@ -2,8 +2,8 @@ extends Node
 
 var worldGrid = []
 var worldRules = {}
-var worldWidth = 17
-var worldHeight = 16
+var worldWidth = 11
+var worldHeight = 9
 
 var worldLerpTime = 1
 var worldAnimationFrame = 0
@@ -17,39 +17,84 @@ var unappliedMovement = null
 onready var tilePrefab = preload("res://src/tile.tscn")
 
 var tileDatabase = {
-	"baba": {"type": 0, "x": 0, "y": 0, "walkCycle": 4, "color": 21},
-	"keke": {"type": 0, "x": 0, "y": 3, "walkCycle": 4, "color": 16},
-	"baba_obj": {"type": 1, "x": 6, "y": 27, "walkCycle": 0, "color": 11},
-	"keke_obj": {"type": 1, "x": 20, "y": 30, "walkCycle": 0, "color": 16},
-	"is_op": {"type": 2, "x": 18, "y": 30, "walkCycle": 0, "color": 21},
-	"pull_act": {"type": 3, "x": 1, "y": 42, "walkCycle": 0, "color": 20},
-	"push_act": {"type": 3, "x": 2, "y": 42, "walkCycle": 0, "color": 13},
-	"stop_act": {"type": 3, "x": 12, "y": 42, "walkCycle": 0, "color": 12},
-	"win_act": {"type": 3, "x": 17, "y": 42, "walkCycle": 0, "color": 30},
-	"you_act": {"type": 3, "x": 20, "y": 42, "walkCycle": 0, "color": 11},
+	"baba": {"type": 0, "x": 0, "y": 0, "walkCycle": 4, "color": 21}, # works
+	"keke": {"type": 0, "x": 0, "y": 3, "walkCycle": 4, "color": 16}, # works
+	"flag": {"type": 0, "x": 6, "y": 21, "color": 30}, # works
+	"rock": {"type": 0, "x": 15, "y": 21, "color": 20}, # works
+	"floor": {"type": 0, "x": 19, "y": 21, "color": 1}, # works, name is guessed
+	"text_and": {"type": 2, "x": 3, "y": 27, "color": 11},
+	"text_baba": {"type": 1, "x": 6, "y": 27, "color": 11}, # works
+	"text_facing": {"type": 2, "x": 29, "y": 27, "color": 21},
+	"text_flag": {"type": 1, "x": 1, "y": 30, "color": 30}, # works
+	"text_has": {"type": 2, "x": 12, "y": 30, "color": 21}, # testing
+	"text_is": {"type": 2, "x": 18, "y": 30, "color": 21}, # works
+	"text_keke": {"type": 1, "x": 20, "y": 30, "color": 16}, # works
+	"text_lonely": {"type": 2, "x": 27, "y": 30, "color": 16},
+	"text_make": {"type": 2, "x": 29, "y": 30, "color": 21},
+	"text_near": {"type": 2, "x": 0, "y": 33, "color": 11},
+	"text_not": {"type": 2, "x": 1, "y": 33, "color": 16},
+	"text_on": {"type": 2, "x": 3, "y": 33, "color": 11},
+	"text_rock": {"type": 1, "x": 11, "y": 33, "color": 20}, # works
+	"text_wall": {"type": 1, "x": 27, "y": 33, "color": 7}, # works
+	"text_pull": {"type": 3, "x": 1, "y": 42, "color": 20}, # works
+	"text_push": {"type": 3, "x": 2, "y": 42, "color": 13}, # works
+	"text_stop": {"type": 3, "x": 12, "y": 42, "color": 12}, # works
+	"text_win": {"type": 3, "x": 17, "y": 42, "color": 30},
+	"text_you": {"type": 3, "x": 20, "y": 42, "color": 11}, # works
+	"wall": {"type": 1, "x": 0, "y": 57, "autoTiled": 1, "color": 8}, # testing
 }
 
 func _ready():
-	OS.set_window_size(Vector2(worldWidth * 24, worldHeight * 24))
+	OS.set_window_size(Vector2(worldWidth * 24 * 2, worldHeight * 24 * 2))
 	
 	for x in range(worldWidth):
 		worldGrid.append([])
 		for y in range(worldHeight):
 			worldGrid[x].append([])
 	
-	spawnTile(7, 7, 0, "baba")
-	spawnTile(7, 9, 0, "keke")
+	spawnTile(0, 0, 0, "text_baba")
+	spawnTile(1, 0, 0, "text_is")
+	spawnTile(2, 0, 0, "text_you")
 	
-	spawnTile(10, 1, 0, "keke_obj")
-	spawnTile(9, 2, 0, "is_op")
-	spawnTile(9, 3, 0, "push_act")
-	spawnTile(10, 3, 0, "pull_act")
+	spawnTile(8, 0, 0, "text_flag")
+	spawnTile(9, 0, 0, "text_is")
+	spawnTile(10, 0, 0, "text_win")
 	
-	spawnTile(9, 6, 0, "baba_obj")
-	spawnTile(9, 7, 0, "is_op")
-	spawnTile(9, 8, 0, "you_act")
+	for x in range(11):
+		spawnTile(x, 2, 0, "wall")
+	
+	for x in range(11):
+		for y in range(3):
+			if (x == 1 && y == 1 || x == 9 && y == 1 || x == 5):
+				continue
+			spawnTile(x, 3 + y, 0, "floor")
+	
+	spawnTile(1, 4, 0, "baba")
+	
+	spawnTile(5, 3, 0, "rock")
+	spawnTile(5, 4, 0, "rock")
+	spawnTile(5, 5, 0, "rock")
+	
+	spawnTile(9, 4, 0, "flag")
+	
+	for x in range(11):
+		spawnTile(x, 6, 0, "wall")
+	
+	spawnTile(0, 8, 0, "text_wall")
+	spawnTile(1, 8, 0, "text_is")
+	spawnTile(2, 8, 0, "text_stop")
+	
+	spawnTile(8, 8, 0, "text_rock")
+	spawnTile(9, 8, 0, "text_is")
+	spawnTile(10, 8, 0, "text_push")
 	
 	checkTheRules()
+	
+	for x in range(worldWidth):
+		for y in range(worldHeight):
+			for i in range(worldGrid[x][y].size()):
+				if (worldGrid[x][y][i].autoTiled):
+					applyAutoTile(worldGrid[x][y][i])
 
 func _process(delta):
 	animtimer += delta
@@ -61,8 +106,6 @@ func _process(delta):
 		for x in range(worldWidth):
 			for y in range(worldHeight):
 				for i in range(worldGrid[x][y].size()):
-					if (i > worldGrid[x][y].size() - 1):
-						i = 0
 					worldGrid[x][y][i].updateSpriteAnim()
 	if (worldLerpTime < 1):
 		worldLerpTime += delta * 10
@@ -88,6 +131,8 @@ func _input(ev):
 		checkTheRules()
 
 func spawnTile(x, y, direction, name) -> void:
+	if (!tileDatabase.has(name)):
+		return
 	var spawnedTile = tilePrefab.instance()
 	add_child(spawnedTile)
 	spawnedTile.main = self
@@ -97,11 +142,11 @@ func spawnTile(x, y, direction, name) -> void:
 	worldGrid[x][y].append(spawnedTile)
 	
 func changeTileType(tile, name, forceLightUp = false) -> void:
+	if (!tileDatabase.has(name)):
+		return
 	tile.tileName = name
 	tile.tileType = tileDatabase[name]["type"]
 	var color_x = tileDatabase[name]["color"]
-	if (tile.tileType != 0 && !forceLightUp):
-		color_x -= 7
 	var color_y = 0
 	while (color_x > 6):
 		color_x -= 7
@@ -118,13 +163,23 @@ func changeTileType(tile, name, forceLightUp = false) -> void:
 		24 + color_palette_y * (3 * 24 - 12) + color_y * 8
 	)
 	textureData.unlock()
-	tile.updateSprite(tileDatabase[name]["x"], tileDatabase[name]["y"], tileDatabase[name]["walkCycle"], color)
+	if (tile.tileType != 0 && !forceLightUp):
+		color *= 0.8
+	tile.updateSprite(tileDatabase[name]["x"], tileDatabase[name]["y"], tileDatabase[name]["walkCycle"] if tileDatabase[name].has("walkCycle") else 0, color)
+	if (tileDatabase[name].has("alwaysWalk") && tileDatabase[name]["alwaysWalk"] == 1):
+		tile.alwaysUpdateWalkFrame = true
+	if (tileDatabase[name].has("autoTiled") && tileDatabase[name]["autoTiled"] == 1):
+		tile.autoTiled = true
 
 func destroyTile(tile) -> void:
-	worldGrid[tile.pos.x][tile.pos.y].erase(tile)
-	remove_child(tile)
+	var hasReplacement = ifOperatorUsed(tile.tileName, "has")
+	if (hasReplacement != ""):
+		changeTileType(tile, hasReplacement)
+	else:
+		worldGrid[tile.pos.x][tile.pos.y].erase(tile)
+		remove_child(tile)
 
-func updateWorld(allowMovement = true) -> void:
+func updateWorld() -> void:
 	var alreadyFinished = []
 	for x in range(worldWidth):
 		for y in range(worldHeight):
@@ -134,11 +189,84 @@ func updateWorld(allowMovement = true) -> void:
 				var tile = worldGrid[x][y][i]
 				if (alreadyFinished.has(tile)):
 					continue
-				if (worldLerpTime == 0 && unappliedMovement != null && ifRuleActive(worldGrid[x][y][i].tileName, "is", "you")):
+				if (tile.alwaysUpdateWalkFrame):
+					tile.updatePos(x, y)
+				if (unappliedMovement != null && ifRuleActive(worldGrid[x][y][i].tileName, "is", "you")):
 					push_tile(tile, unappliedMovement.x, unappliedMovement.y, alreadyFinished)
 				# todo apply rules and stuff
-	if (worldLerpTime == 0):
-		unappliedMovement = null
+	unappliedMovement = null
+
+func applyAutoTile(tile) -> void:
+	var left = false
+	var right = false
+	var top = false
+	var bottom = false
+	if (tile.pos.x > 0):
+		for i in range(worldGrid[tile.pos.x - 1][tile.pos.y].size()):
+			if (worldGrid[tile.pos.x - 1][tile.pos.y][i].tileName == tile.tileName):
+				left = true
+				break
+	if (tile.pos.x < worldWidth - 1):
+		for i in range(worldGrid[tile.pos.x + 1][tile.pos.y].size()):
+			if (worldGrid[tile.pos.x + 1][tile.pos.y][i].tileName == tile.tileName):
+				right = true
+				break
+	if (tile.pos.y > 0):
+		for i in range(worldGrid[tile.pos.x][tile.pos.y - 1].size()):
+			if (worldGrid[tile.pos.x][tile.pos.y - 1][i].tileName == tile.tileName):
+				top = true
+				break
+	if (tile.pos.y < worldHeight - 1):
+		for i in range(worldGrid[tile.pos.x][tile.pos.y + 1].size()):
+			if (worldGrid[tile.pos.x][tile.pos.y + 1][i].tileName == tile.tileName):
+				bottom = true
+				break
+	if (left):
+		if (bottom):
+			if (top):
+				if (right):
+					tile.autoTileValue = 15
+					return
+				tile.autoTileValue = 14
+				return
+			if (right):
+				tile.autoTileValue = 13
+				return
+			tile.autoTileValue = 12
+			return
+		if (top):
+			if (right):
+				tile.autoTileValue = 7
+				return
+			tile.autoTileValue = 6
+			return
+		if (right):
+			tile.autoTileValue = 5
+			return
+		tile.autoTileValue = 4
+		return
+	if (bottom):
+		if (top):
+			if (right):
+				tile.autoTileValue = 11
+				return
+			tile.autoTileValue = 10
+			return
+		if (right):
+			tile.autoTileValue = 9
+			return
+		tile.autoTileValue = 8
+		return
+	if (top):
+		if (right):
+			tile.autoTileValue = 3
+			return
+		tile.autoTileValue = 2
+		return
+	if (right):
+		tile.autoTileValue = 1
+		return
+	tile.autoTileValue = 0
 
 func push_tile(tile, delta_x, delta_y, alreadyFinished) -> bool:
 	var newX = tile.pos.x + delta_x
@@ -173,6 +301,8 @@ func push_tile(tile, delta_x, delta_y, alreadyFinished) -> bool:
 				push_tile(pulledTile, delta_x, delta_y, alreadyFinishedSub)
 	worldGrid[tile.pos.x][tile.pos.y].erase(tile)
 	tile.updatePos(newX, newY)
+	if (tile.autoTiled):
+		applyAutoTile(tile)
 	worldGrid[newX][newY].append(tile)
 	if (alreadyFinished != null):
 		alreadyFinished.append(tile)
@@ -231,9 +361,9 @@ func checkTileRules(tile) -> void:
 						applyRule(tile, worldGrid[tile.pos.x][tile.pos.y + 1][j], worldGrid[tile.pos.x][tile.pos.y + 2][g])
 
 func applyRule(tile1, tile2, tile3) -> void:
-	var affectedTile = tile1.tileName.split("_")[0]
-	var operator = tile2.tileName.split("_")[0]
-	var action = tile3.tileName.split("_")[0]
+	var affectedTile = tile1.tileName.split("_")[1]
+	var operator = tile2.tileName.split("_")[1]
+	var action = tile3.tileName.split("_")[1]
 	var ifReplacement = tile3.tileType == 1
 	if (operator == "is"):
 		if (ifReplacement):
@@ -259,15 +389,10 @@ func saveRule(tile_name, operator, action) -> void:
 	else:
 		worldRules[tile_name][operator][action] += 1
 
-func removeRule(tile_name, operator, action) -> void:
-	worldRules[tile_name][operator][action] -= 1
-	if (worldRules[tile_name][operator][action] == 0):
-		worldRules[tile_name][operator].erase(action)
-		if (worldRules[tile_name][operator].size() == 0):
-			worldRules[tile_name].erase(operator)
-			if (worldRules[tile_name].size() == 0):
-				worldRules.erase(tile_name)
-
 func ifRuleActive(tile_name, operator, action) -> bool:
-	return worldRules.has(tile_name) && worldRules[tile_name].has(operator) && worldRules[tile_name][operator].has(action)
+	return (worldRules.has(tile_name) || worldRules.has(tile_name + "2") || worldRules.has(tile_name + "3")) && worldRules[tile_name].has(operator) && worldRules[tile_name][operator].has(action)
 
+func ifOperatorUsed(tile_name, operator) -> String:
+	if (worldRules.has(tile_name) && worldRules[tile_name].has(operator)):
+		return worldRules[tile_name][operator][worldRules[tile_name][operator].keys()[0]]
+	return ""

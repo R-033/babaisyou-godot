@@ -3,12 +3,16 @@ extends Sprite
 var tileName = ""
 var tileType = 0
 var direction = 0
+var autoTileValue = 0
 
 var atlasX = 0
 var atlasY = 0
 var atlasWalkCycle = 0
 
 var atlasCurrentWalkFrame = 0
+var alwaysUpdateWalkFrame = false
+
+var autoTiled = false
 
 var oldPos = Vector2(0, 0)
 var pos = Vector2(0, 0)
@@ -21,7 +25,7 @@ func updatePos(x, y) -> void:
 	oldPos = pos
 	pos = newPos
 	needsToMove = true
-	if (oldPos != newPos && main.worldLerpTime != 1):
+	if (alwaysUpdateWalkFrame == (oldPos == pos) && main.worldLerpTime != 1):
 		atlasCurrentWalkFrame += 1
 		if (atlasCurrentWalkFrame >= atlasWalkCycle):
 			atlasCurrentWalkFrame = 0
@@ -39,7 +43,7 @@ func updateSpriteColor(color) -> void:
 	modulate = color
 
 func updateSpriteAnim() -> void:
-	var xpos = atlasX + direction * (atlasWalkCycle + (1 if atlasWalkCycle > 1 else 0)) + atlasCurrentWalkFrame + (1 if atlasWalkCycle > 1 else 0)
+	var xpos = atlasX + autoTileValue + direction * (atlasWalkCycle + (1 if atlasWalkCycle > 1 else 0)) + atlasCurrentWalkFrame + (1 if atlasWalkCycle > 1 else 0)
 	region_rect.position.x = xpos * 24
 	region_rect.position.y = (atlasY + main.worldAnimationFrame) * 24
 	
