@@ -1,0 +1,15 @@
+[remap]
+
+importer="ogg_vorbis"
+type="AudioStreamOGGVorbis"
+path="res://.import/garden.ogg-937aef59f6f90e0acd61e703d4f4ba5a.oggstr"
+
+[deps]
+
+source_file="res://music/garden.ogg"
+dest_files=[ "res://.import/garden.ogg-937aef59f6f90e0acd61e703d4f4ba5a.oggstr" ]
+
+[params]
+
+loop=true
+loop_offset=0

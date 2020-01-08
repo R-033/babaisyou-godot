@@ -1,14 +1,15 @@
 extends Node
 
-var worldGrid = []
+var loaded
+
+var tiles = []
 var worldRules = {}
+
 var worldWidth = 11
 var worldHeight = 9
 
 var worldLerpTime = 1
 var worldAnimationFrame = 0
-
-var worldColorPalette = 0
 
 var animtimer = 0
 
@@ -16,85 +17,105 @@ var unappliedMovement = null
 
 onready var tilePrefab = preload("res://src/tile.tscn")
 
-var tileDatabase = {
-	"baba": {"type": 0, "x": 0, "y": 0, "walkCycle": 4, "color": 21}, # works
-	"keke": {"type": 0, "x": 0, "y": 3, "walkCycle": 4, "color": 16}, # works
-	"flag": {"type": 0, "x": 6, "y": 21, "color": 30}, # works
-	"rock": {"type": 0, "x": 15, "y": 21, "color": 20}, # works
-	"floor": {"type": 0, "x": 19, "y": 21, "color": 1}, # works, name is guessed
-	"text_and": {"type": 2, "x": 3, "y": 27, "color": 11},
-	"text_baba": {"type": 1, "x": 6, "y": 27, "color": 11}, # works
-	"text_facing": {"type": 2, "x": 29, "y": 27, "color": 21},
-	"text_flag": {"type": 1, "x": 1, "y": 30, "color": 30}, # works
-	"text_has": {"type": 2, "x": 12, "y": 30, "color": 21}, # testing
-	"text_is": {"type": 2, "x": 18, "y": 30, "color": 21}, # works
-	"text_keke": {"type": 1, "x": 20, "y": 30, "color": 16}, # works
-	"text_lonely": {"type": 2, "x": 27, "y": 30, "color": 16},
-	"text_make": {"type": 2, "x": 29, "y": 30, "color": 21},
-	"text_near": {"type": 2, "x": 0, "y": 33, "color": 11},
-	"text_not": {"type": 2, "x": 1, "y": 33, "color": 16},
-	"text_on": {"type": 2, "x": 3, "y": 33, "color": 11},
-	"text_rock": {"type": 1, "x": 11, "y": 33, "color": 20}, # works
-	"text_wall": {"type": 1, "x": 27, "y": 33, "color": 7}, # works
-	"text_pull": {"type": 3, "x": 1, "y": 42, "color": 20}, # works
-	"text_push": {"type": 3, "x": 2, "y": 42, "color": 13}, # works
-	"text_stop": {"type": 3, "x": 12, "y": 42, "color": 12}, # works
-	"text_win": {"type": 3, "x": 17, "y": 42, "color": 30},
-	"text_you": {"type": 3, "x": 20, "y": 42, "color": 11}, # works
-	"wall": {"type": 1, "x": 0, "y": 57, "autoTiled": 1, "color": 8}, # testing
-}
+var database
+var loadedSprites = {}
+var palette
 
 func _ready():
-	OS.set_window_size(Vector2(worldWidth * 24 * 2, worldHeight * 24 * 2))
 	
-	for x in range(worldWidth):
-		worldGrid.append([])
-		for y in range(worldHeight):
-			worldGrid[x].append([])
+	database = load("res://src/database.gd").tiles
 	
-	spawnTile(0, 0, 0, "text_baba")
-	spawnTile(1, 0, 0, "text_is")
-	spawnTile(2, 0, 0, "text_you")
+	#loadLevel(0)
 	
-	spawnTile(8, 0, 0, "text_flag")
-	spawnTile(9, 0, 0, "text_is")
-	spawnTile(10, 0, 0, "text_win")
+	loadPalette("default.png")
 	
-	for x in range(11):
-		spawnTile(x, 2, 0, "wall")
+	spawnTileByName(1, 1, 0, "text_baba")
+	spawnTileByName(2, 1, 0, "text_is")
+	spawnTileByName(3, 1, 0, "text_you")
+	
+	spawnTileByName(7, 1, 0, "text_flag")
+	spawnTileByName(8, 1, 0, "text_is")
+	spawnTileByName(9, 1, 0, "text_win")
 	
 	for x in range(11):
 		for y in range(3):
 			if (x == 1 && y == 1 || x == 9 && y == 1 || x == 5):
 				continue
-			spawnTile(x, 3 + y, 0, "floor")
+			spawnTileByName(x, 3 + y, 0, "tile")
 	
-	spawnTile(1, 4, 0, "baba")
+	for x in range(3):
+		spawnTileByName(4 + x, 2, 0, "wall")
 	
-	spawnTile(5, 3, 0, "rock")
-	spawnTile(5, 4, 0, "rock")
-	spawnTile(5, 5, 0, "rock")
+	spawnTileByName(1, 4, 0, "baba")
+	spawnTileByName(9, 4, 0, "flag")
+	spawnTileByName(5, 3, 0, "rock")
+	spawnTileByName(5, 4, 0, "rock")
+	spawnTileByName(5, 5, 0, "rock")
 	
-	spawnTile(9, 4, 0, "flag")
+	for x in range(3):
+		spawnTileByName(4 + x, 6, 0, "wall")
+
+	spawnTileByName(1, 7, 0, "text_wall")
+	spawnTileByName(2, 7, 0, "text_is")
+	spawnTileByName(3, 7, 0, "text_stop")
 	
-	for x in range(11):
-		spawnTile(x, 6, 0, "wall")
+	spawnTileByName(7, 7, 0, "text_rock")
+	spawnTileByName(8, 7, 0, "text_is")
+	spawnTileByName(9, 7, 0, "text_push")
 	
-	spawnTile(0, 8, 0, "text_wall")
-	spawnTile(1, 8, 0, "text_is")
-	spawnTile(2, 8, 0, "text_stop")
-	
-	spawnTile(8, 8, 0, "text_rock")
-	spawnTile(9, 8, 0, "text_is")
-	spawnTile(10, 8, 0, "text_push")
+	OS.set_window_size(Vector2(worldWidth * 24 * 2, worldHeight * 24 * 2))
+	get_node("/root/root/Camera2D").position = Vector2(round(float(worldWidth * 24) / 2.0), round(float(worldHeight * 24) / 2.0))
 	
 	checkTheRules()
 	
-	for x in range(worldWidth):
-		for y in range(worldHeight):
-			for i in range(worldGrid[x][y].size()):
-				if (worldGrid[x][y][i].autoTiled):
-					applyAutoTile(worldGrid[x][y][i])
+	for tile in tiles:
+		if (tile.tilingMode == 1):
+			applyAutoTile(tile)
+
+func loadLevel(levelNum) -> void:
+		
+	var level = ConfigFile.new()
+	var err = level.load("res://levels/" + str(levelNum) + "level.ld")
+	if err == OK:
+		
+		loadPalette(level.get_value("general", "palette"))
+		
+		var changedTiles = level.get_value("tiles", "changed").split(",", false)
+		for changedTile in changedTiles:
+			if (!database.has(changedTile)):
+				database[changedTile] = {}
+			if (level.has_section_key(changedTile + "_image")):
+				database[changedTile]["sprite"] = level.get_value(changedTile + "_image")
+			if (level.has_section_key(changedTile + "_name")):
+				database[changedTile]["name"] = level.get_value(changedTile + "_name")
+			if (level.has_section_key(changedTile + "_unittype")):
+				database[changedTile]["unittype"] = level.get_value(changedTile + "_unittype")
+			if (level.has_section_key(changedTile + "_type")):
+				database[changedTile]["type"] = level.get_value(changedTile + "_type")
+			if (level.has_section_key(changedTile + "_tiling")):
+				database[changedTile]["tiling"] = level.get_value(changedTile + "_tiling")
+			if (level.has_section_key(changedTile + "_colour")):
+				database[changedTile]["colour"] = level.get_value(changedTile + "_colour")
+			if (level.has_section_key(changedTile + "_activecolour")):
+				database[changedTile]["ative"] = level.get_value(changedTile + "_activecolour")
+			if (level.has_section_key(changedTile + "_argextra")):
+				database[changedTile]["argextra"] = level.get_value(changedTile + "_argextra")
+			# perhaps more?
+
+		var objectCount = level.get_value("general", "currobjlist_total")
+		#for objectNum in range(1, objectCount + 1):
+		#	var pos = [0, 0]
+		#	var direction = 0
+		#	spawnTile(pos[0], pos[1], direction, level.get_value("currobjlist", str(objectNum) + "object"))
+	else:
+		push_error("error loading level " + str(levelNum) + ": " + str(err))
+
+func loadPalette(fileName) -> void:
+	if (palette != null):
+		palette.unlock()
+	palette = load("res://palettes/" + fileName).get_data()
+	palette.lock()
+	VisualServer.set_default_clear_color(palette.get_pixel(6, 4))
 
 func _process(delta):
 	animtimer += delta
@@ -103,18 +124,27 @@ func _process(delta):
 		worldAnimationFrame += 1
 		if (worldAnimationFrame > 2):
 			worldAnimationFrame = 0
-		for x in range(worldWidth):
-			for y in range(worldHeight):
-				for i in range(worldGrid[x][y].size()):
-					worldGrid[x][y][i].updateSpriteAnim()
+		for tile in tiles:
+			tile.updateSpriteAnim()
 	if (worldLerpTime < 1):
 		worldLerpTime += delta * 10
 		if (worldLerpTime > 1):
 			worldLerpTime = 1
 
+var palettes = ["default.png", "abstract.png", "autumn.png", "contrast.png", "factory.png", "garden.png", "marshmallow.png", "mono.png", "mountain.png", "ocean.png", "ruins.png", "space.png", "swamp.png", "test.png", "variant.png", "volcano.png"]
+var curpal = 0
+
 func _input(ev):
 	if (worldLerpTime != 1):
 		return
+	if Input.is_key_pressed(KEY_P):
+		curpal += 1
+		if (curpal > palettes.size() - 1):
+			curpal = 0
+		loadPalette(palettes[curpal])
+		for tile in tiles:
+			changeTileType(tile, tile.tileId)
+		checkTheRules()
 	if Input.is_key_pressed(KEY_SPACE):
 		unappliedMovement = Vector2(0, 0)
 	elif Input.is_key_pressed(KEY_RIGHT):
@@ -130,70 +160,89 @@ func _input(ev):
 		updateWorld()
 		checkTheRules()
 
+func spawnTileByName(x, y, direction, tileName) -> void:
+	spawnTile(x, y, direction, findTileId(tileName))
+
 func spawnTile(x, y, direction, name) -> void:
-	if (!tileDatabase.has(name)):
-		return
 	var spawnedTile = tilePrefab.instance()
 	add_child(spawnedTile)
 	spawnedTile.main = self
-	spawnedTile.updatePos(x, y)
 	spawnedTile.direction = direction
 	changeTileType(spawnedTile, name)
-	worldGrid[x][y].append(spawnedTile)
+	spawnedTile.updatePos(x, y)
+	tiles.append(spawnedTile)
 	
 func changeTileType(tile, name, forceLightUp = false) -> void:
-	if (!tileDatabase.has(name)):
-		return
-	tile.tileName = name
-	tile.tileType = tileDatabase[name]["type"]
-	var color_x = tileDatabase[name]["color"]
-	var color_y = 0
-	while (color_x > 6):
-		color_x -= 7
-		color_y += 1
-	var color_palette_x = worldColorPalette
-	var color_palette_y = 0
-	while (color_palette_x > 3):
-		color_palette_x -= 4
-		color_palette_y += 1
-	var textureData = tile.get_texture().get_data();
-	textureData.lock()
-	var color = textureData.get_pixel(
-		20 * 24 + 12 + color_palette_x * (3 * 24) + color_x * 8,
-		24 + color_palette_y * (3 * 24 - 12) + color_y * 8
-	)
-	textureData.unlock()
-	if (tile.tileType != 0 && !forceLightUp):
-		color *= 0.8
-	tile.updateSprite(tileDatabase[name]["x"], tileDatabase[name]["y"], tileDatabase[name]["walkCycle"] if tileDatabase[name].has("walkCycle") else 0, color)
-	if (tileDatabase[name].has("alwaysWalk") && tileDatabase[name]["alwaysWalk"] == 1):
-		tile.alwaysUpdateWalkFrame = true
-	if (tileDatabase[name].has("autoTiled") && tileDatabase[name]["autoTiled"] == 1):
-		tile.autoTiled = true
+	
+	tile.tileName = database[name]["name"]
+	tile.tileId = name
+	
+	var rawType = database[name]["type"]
+	if (rawType == 0):
+		if (database[name]["unittype"] == "text"):
+			rawType = 1
+	elif (rawType == 7):
+		rawType = 4
+	elif (rawType == 1):
+		rawType = 2
+	elif (rawType == 2):
+		rawType = 3
+	else:
+		push_error("unknown tile type " + str(rawType) + " (" + tile.tileName + ")")
+	
+	tile.tileType = rawType
+	tile.tilingMode = database[name]["tiling"]
+	
+	if (!loadedSprites.has(name)):
+		loadedSprites[name] = []
+		var spriteName = database[name]["sprite"]
+		loadSprite(name, spriteName + "_0")
+		if (tile.tilingMode == 2):
+			for i in [1, 2, 3, 7, 8, 9, 10, 16, 17, 18, 19, 24, 25, 26, 27, 11, 15, 23, 31]:
+				loadSprite(name, spriteName + "_" + str(i))
+		elif (tile.tilingMode == 1):
+			for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]:
+				loadSprite(name, spriteName + "_" + str(i))
+		elif (tile.tilingMode != -1):
+			push_error("tiling mode " + str(tile.tilingMode) + " is not implemented (" + tile.tileName + ")")
+	
+	var color
+	if (tile.tileType == 0 || !forceLightUp):
+		color = palette.get_pixel(database[name]["colour"][0], database[name]["colour"][1])
+	else:
+		color = palette.get_pixel(database[name]["active"][0], database[name]["active"][1])
+	tile.updateSpriteColor(color)
+	
+	tile.z_index = database[name]["layer"]
+
+func loadSprite(name, spriteName) -> void:
+	loadedSprites[name].append([load("res://sprites/" + spriteName + "_1.png"), load("res://sprites/" + spriteName + "_2.png"), load("res://sprites/" + spriteName + "_3.png")])
 
 func destroyTile(tile) -> void:
 	var hasReplacement = ifOperatorUsed(tile.tileName, "has")
 	if (hasReplacement != ""):
-		changeTileType(tile, hasReplacement)
+		changeTileType(tile, findTileId(hasReplacement))
 	else:
-		worldGrid[tile.pos.x][tile.pos.y].erase(tile)
+		tiles.erase(tile)
 		remove_child(tile)
+
+func findTileId(name) -> String:
+	for key in database.keys():
+		if (database[key]["name"] == name):
+			return key
+	push_error("tile " + str(name) + " doesn't exist")
+	return ""
 
 func updateWorld() -> void:
 	var alreadyFinished = []
-	for x in range(worldWidth):
-		for y in range(worldHeight):
-			for i in range(worldGrid[x][y].size()):
-				if (i > worldGrid[x][y].size() - 1):
-					i = 0
-				var tile = worldGrid[x][y][i]
-				if (alreadyFinished.has(tile)):
-					continue
-				if (tile.alwaysUpdateWalkFrame):
-					tile.updatePos(x, y)
-				if (unappliedMovement != null && ifRuleActive(worldGrid[x][y][i].tileName, "is", "you")):
-					push_tile(tile, unappliedMovement.x, unappliedMovement.y, alreadyFinished)
-				# todo apply rules and stuff
+	for tile in tiles:
+		#if (tile.alwaysUpdateWalkFrame):
+		#	tile.updatePos(x, y)
+		if (alreadyFinished.has(tile)):
+			continue
+		if (unappliedMovement != null && ifRuleActive(tile.tileName, "is", "you")):
+			push_tile(tile, unappliedMovement.x, unappliedMovement.y, alreadyFinished)
+		# todo apply rules and stuff
 	unappliedMovement = null
 
 func applyAutoTile(tile) -> void:
@@ -201,26 +250,16 @@ func applyAutoTile(tile) -> void:
 	var right = false
 	var top = false
 	var bottom = false
-	if (tile.pos.x > 0):
-		for i in range(worldGrid[tile.pos.x - 1][tile.pos.y].size()):
-			if (worldGrid[tile.pos.x - 1][tile.pos.y][i].tileName == tile.tileName):
+	for subTile in tiles:
+		if (subTile.tileName == tile.tileName):
+			if (subTile.pos.x == tile.pos.x - 1 && subTile.pos.y == tile.pos.y):
 				left = true
-				break
-	if (tile.pos.x < worldWidth - 1):
-		for i in range(worldGrid[tile.pos.x + 1][tile.pos.y].size()):
-			if (worldGrid[tile.pos.x + 1][tile.pos.y][i].tileName == tile.tileName):
+			elif (subTile.pos.x == tile.pos.x + 1 && subTile.pos.y == tile.pos.y):
 				right = true
-				break
-	if (tile.pos.y > 0):
-		for i in range(worldGrid[tile.pos.x][tile.pos.y - 1].size()):
-			if (worldGrid[tile.pos.x][tile.pos.y - 1][i].tileName == tile.tileName):
+			elif (subTile.pos.x == tile.pos.x && subTile.pos.y == tile.pos.y - 1):
 				top = true
-				break
-	if (tile.pos.y < worldHeight - 1):
-		for i in range(worldGrid[tile.pos.x][tile.pos.y + 1].size()):
-			if (worldGrid[tile.pos.x][tile.pos.y + 1][i].tileName == tile.tileName):
+			elif (subTile.pos.x == tile.pos.x && subTile.pos.y == tile.pos.y + 1):
 				bottom = true
-				break
 	if (left):
 		if (bottom):
 			if (top):
@@ -275,35 +314,21 @@ func push_tile(tile, delta_x, delta_y, alreadyFinished) -> bool:
 	var oppositeY = tile.pos.y - delta_y
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
 		return false
-	for j in range(worldGrid[newX][newY].size()):
-		var pushedTile = worldGrid[newX][newY][j]
-		if (is_tile_solid(pushedTile)):
-			if (!can_be_pushed(pushedTile, delta_x, delta_y)):
-				return false
-	var alreadyFinishedSub = []
-	for j in range(worldGrid[newX][newY].size()):
-		if (j > worldGrid[newX][newY].size() - 1):
-			j = 0
-		var pushedTile = worldGrid[newX][newY][j]
-		if (alreadyFinished.has(pushedTile)):
-			continue
-		if (is_tile_solid(pushedTile)):
-			push_tile(pushedTile, delta_x, delta_y, alreadyFinishedSub)
-	if (oppositeX > 0 && oppositeX < worldWidth - 1 && oppositeY > 0 && oppositeY < worldHeight - 1):
-		alreadyFinishedSub = []
-		for j in range(worldGrid[oppositeX][oppositeY].size()):
-			if (j > worldGrid[oppositeX][oppositeY].size() - 1):
-				j = 0
-			var pulledTile = worldGrid[oppositeX][oppositeY][j]
-			if (alreadyFinished.has(pulledTile)):
-				continue
-			if (ifRuleActive(pulledTile.tileName, "is", "pull")):
-				push_tile(pulledTile, delta_x, delta_y, alreadyFinishedSub)
-	worldGrid[tile.pos.x][tile.pos.y].erase(tile)
+	var pushableTiles = []
+	for pushedTile in tiles:
+		if (pushedTile.pos.x == newX && pushedTile.pos.y == newY):
+			if (is_tile_solid(pushedTile)):
+				if (!can_be_pushed(pushedTile, delta_x, delta_y)):
+					return false
+				pushableTiles.append(pushedTile)
+		elif (pushedTile.pos.x == oppositeX && pushedTile.pos.y == oppositeY):
+			if (ifRuleActive(pushedTile.tileName, "is", "pull")):
+				pushableTiles.append(pushedTile)
+	for pushedTile in pushableTiles:
+		push_tile(pushedTile, delta_x, delta_y, null)
 	tile.updatePos(newX, newY)
-	if (tile.autoTiled):
+	if (tile.tilingMode == 1):
 		applyAutoTile(tile)
-	worldGrid[newX][newY].append(tile)
 	if (alreadyFinished != null):
 		alreadyFinished.append(tile)
 	return true
@@ -317,11 +342,11 @@ func can_be_pushed(tile, delta_x, delta_y) -> bool:
 		return false
 	if (ifRuleActive(tile.tileName, "is", "pull")):
 		return false
-	for j in range(worldGrid[newX][newY].size()):
-		var pushedTile = worldGrid[newX][newY][j]
-		if (is_tile_solid(pushedTile)):
-			if (!can_be_pushed(pushedTile, delta_x, delta_y)):
-				return false
+	for pushedTile in tiles:
+		if (pushedTile.pos.x == newX && pushedTile.pos.y == newY):
+			if (is_tile_solid(pushedTile)):
+				if (!can_be_pushed(pushedTile, delta_x, delta_y)):
+					return false
 	return true
 
 func is_tile_solid(tile) -> bool:
@@ -331,34 +356,33 @@ func is_tile_solid(tile) -> bool:
 		return true
 	if (ifRuleActive(tile.tileName, "is", "pull")):
 		return true
+	if (ifRuleActive(tile.tileName, "is", "stop")):
+		return true
 	return false
 
 func checkTheRules() -> void:
 	worldRules.clear()
-	for x in range(worldWidth):
-		for y in range(worldHeight):
-			for i in range(worldGrid[x][y].size()):
-				if (worldGrid[x][y][i].tileType != 0):
-					changeTileType(worldGrid[x][y][i], worldGrid[x][y][i].tileName)
-	for x in range(worldWidth):
-		for y in range(worldHeight):
-			for i in range(worldGrid[x][y].size()):
-				if (worldGrid[x][y][i].tileType == 1):
-					checkTileRules(worldGrid[x][y][i])
+	for tile in tiles:
+		if (tile.tileType != 0):
+			changeTileType(tile, tile.tileId)
+	for tile in tiles:
+		if (tile.tileType == 1):
+			checkTileRules(tile)
 
 func checkTileRules(tile) -> void:
-	if (tile.pos.x < worldWidth - 2):
-		for j in range(worldGrid[tile.pos.x + 1][tile.pos.y].size()):
-			if (worldGrid[tile.pos.x + 1][tile.pos.y][j].tileType == 2):
-				for g in range(worldGrid[tile.pos.x + 2][tile.pos.y].size()):
-					if (worldGrid[tile.pos.x + 2][tile.pos.y][g].tileType == 3 || worldGrid[tile.pos.x + 2][tile.pos.y][g].tileType == 1):
-						applyRule(tile, worldGrid[tile.pos.x + 1][tile.pos.y][j], worldGrid[tile.pos.x + 2][tile.pos.y][g])
-	if (tile.pos.y < worldHeight - 2):
-		for j in range(worldGrid[tile.pos.x][tile.pos.y + 1].size()):
-			if (worldGrid[tile.pos.x][tile.pos.y + 1][j].tileType == 2):
-				for g in range(worldGrid[tile.pos.x][tile.pos.y + 2].size()):
-					if (worldGrid[tile.pos.x][tile.pos.y + 2][g].tileType == 3 || worldGrid[tile.pos.x][tile.pos.y + 2][g].tileType == 1):
-						applyRule(tile, worldGrid[tile.pos.x][tile.pos.y + 1][j], worldGrid[tile.pos.x][tile.pos.y + 2][g])
+	for secondTile in tiles:
+		if (secondTile.pos.x == tile.pos.x + 1 && secondTile.pos.y == tile.pos.y):
+			if (secondTile.tileType == 2):
+				for thirdTile in tiles:
+					if (thirdTile.pos.x == tile.pos.x + 2 && thirdTile.pos.y == tile.pos.y):
+						if (thirdTile.tileType == 3 || thirdTile.tileType == 1):
+							applyRule(tile, secondTile, thirdTile)
+		if (secondTile.pos.x == tile.pos.x && secondTile.pos.y == tile.pos.y + 1):
+			if (secondTile.tileType == 2):
+				for thirdTile in tiles:
+					if (thirdTile.pos.x == tile.pos.x && thirdTile.pos.y == tile.pos.y + 2):
+						if (thirdTile.tileType == 3 || thirdTile.tileType == 1):
+							applyRule(tile, secondTile, thirdTile)
 
 func applyRule(tile1, tile2, tile3) -> void:
 	var affectedTile = tile1.tileName.split("_")[1]
@@ -369,15 +393,13 @@ func applyRule(tile1, tile2, tile3) -> void:
 		if (ifReplacement):
 			if (ifRuleActive(affectedTile, "is", affectedTile)):
 				return
-			for x in range(worldWidth):
-				for y in range(worldHeight):
-					for i in range(worldGrid[x][y].size()):
-						if (worldGrid[x][y][i].tileName == affectedTile):
-							changeTileType(worldGrid[x][y][i], action)
+			for subTile in tiles:
+				if (subTile.tileName == affectedTile):
+					changeTileType(subTile, findTileId(action))
 	saveRule(affectedTile, operator, action)
-	changeTileType(tile1, tile1.tileName, true)
-	changeTileType(tile2, tile2.tileName, true)
-	changeTileType(tile3, tile3.tileName, true)
+	changeTileType(tile1, tile1.tileId, true)
+	changeTileType(tile2, tile2.tileId, true)
+	changeTileType(tile3, tile3.tileId, true)
 
 func saveRule(tile_name, operator, action) -> void:
 	if (!worldRules.has(tile_name)):
