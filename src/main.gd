@@ -193,6 +193,9 @@ func changeTileType(tile, name, forceLightUp = false) -> void:
 	tile.tileType = rawType
 	tile.tilingMode = database[name]["tiling"]
 	
+	if (tile.tilingMode != 1):
+		tile.autoTileValue = 0
+	
 	if (!loadedSprites.has(name)):
 		loadedSprites[name] = []
 		var spriteName = database[name]["sprite"]
@@ -396,6 +399,7 @@ func applyRule(tile1, tile2, tile3) -> void:
 			for subTile in tiles:
 				if (subTile.tileName == affectedTile):
 					changeTileType(subTile, findTileId(action))
+					subTile.updateSpriteAnim()
 	saveRule(affectedTile, operator, action)
 	changeTileType(tile1, tile1.tileId, true)
 	changeTileType(tile2, tile2.tileId, true)
