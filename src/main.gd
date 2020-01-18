@@ -1,12 +1,23 @@
 extends Node
 
+# todo float
+# fix more
+# todo red
+# todo blue
+# todo all
+# todo and
+# todo not
+# todo turn
+# todo deturn
+# todo still
+
 var loaded
 
 var tiles = []
 var worldRules = {}
 
-var worldWidth = 15
-var worldHeight = 13
+var worldWidth = 27
+var worldHeight = 23
 
 var worldLerpTime = 1
 var worldAnimationFrame = 0
@@ -14,6 +25,7 @@ var worldAnimationFrame = 0
 var animtimer = 0
 
 var unappliedMovement = null
+var unappliedRules = false
 var alreadyFinished
 
 onready var tilePrefab = preload("res://src/tile.tscn")
@@ -21,6 +33,155 @@ onready var tilePrefab = preload("res://src/tile.tscn")
 var database
 var loadedSprites = {}
 var palette
+
+var controlsActive = true
+
+var startTime = OS.get_ticks_msec()
+var curTime = startTime
+
+func test_pong() -> void:
+	spawnTileByName(0, 0, 0, "text_orb")
+	spawnTileByName(1, 0, 0, "text_is")
+	spawnTileByName(2, 0, 0, "text_move")
+	
+	spawnTileByName(0, 1, 0, "text_tile")
+	spawnTileByName(1, 1, 0, "text_on")
+	spawnTileByName(2, 1, 0, "text_orb")
+	spawnTileByName(3, 1, 0, "text_is")
+	spawnTileByName(4, 1, 0, "text_shift")
+	
+	spawnTileByName(0, 2, 0, "text_text")
+	spawnTileByName(1, 2, 0, "text_on")
+	spawnTileByName(2, 2, 0, "text_tile")
+	spawnTileByName(3, 2, 0, "text_is")
+	spawnTileByName(4, 2, 0, "text_swap")
+	
+	spawnTileByName(0, 3, 0, "text_tile")
+	spawnTileByName(1, 3, 0, "text_near")
+	spawnTileByName(2, 3, 0, "text_me")
+	spawnTileByName(3, 3, 0, "text_is")
+	spawnTileByName(4, 3, 0, "text_stop")
+
+	spawnTileByName(6, 0, 0, "text_baba")
+	spawnTileByName(7, 0, 0, "text_not")
+	spawnTileByName(8, 0, 0, "text_on")
+	spawnTileByName(9, 0, 0, "text_grass")
+	spawnTileByName(10, 0, 0, "text_is")
+	spawnTileByName(11, 0, 0, "text_defeat")
+	
+	spawnTileByName(6, 1, 0, "text_baba")
+	spawnTileByName(7, 1, 0, "text_is")
+	spawnTileByName(8, 1, 0, "text_you")
+	spawnTileByName(9, 1, 0, "text_and")
+	spawnTileByName(10, 1, 0, "text_stop")
+	
+	spawnTileByName(6, 2, 0, "text_keke")
+	spawnTileByName(7, 2, 0, "text_is")
+	spawnTileByName(8, 2, 0, "text_move")
+	spawnTileByName(9, 2, 0, "text_and")
+	spawnTileByName(10, 2, 0, "text_stop")
+
+	spawnTileByName(13, 0, 0, "text_orb")
+	spawnTileByName(14, 0, 0, "text_near")
+	spawnTileByName(15, 0, 0, "text_grass")
+	spawnTileByName(16, 0, 0, "text_and")
+	spawnTileByName(17, 0, 0, "text_not")
+	spawnTileByName(18, 0, 0, "text_near")
+	spawnTileByName(19, 0, 0, "text_baba")
+	spawnTileByName(20, 0, 0, "text_is")
+	spawnTileByName(21, 0, 0, "text_love")
+	
+	spawnTileByName(13, 1, 0, "text_orb")
+	spawnTileByName(14, 1, 0, "text_near")
+	spawnTileByName(15, 1, 0, "text_brick")
+	spawnTileByName(16, 1, 0, "text_and")
+	spawnTileByName(17, 1, 0, "text_not")
+	spawnTileByName(18, 1, 0, "text_near")
+	spawnTileByName(19, 1, 0, "text_keke")
+	spawnTileByName(20, 1, 0, "text_is")
+	spawnTileByName(21, 1, 0, "text_dust")
+	
+	spawnTileByName(23, 0, 0, "text_level")
+	spawnTileByName(23, 1, 0, "text_is")
+	spawnTileByName(23, 2, 0, "text_shut")
+	
+	spawnTileByName(24, 0, 0, "text_love")
+	spawnTileByName(24, 1, 0, "text_is")
+	spawnTileByName(24, 2, 0, "text_open")
+	
+	spawnTileByName(25, 0, 0, "text_me")
+	spawnTileByName(25, 1, 0, "text_is")
+	spawnTileByName(25, 2, 0, "text_move")
+	
+	spawnTileByName(26, 0, 0, "text_wall")
+	spawnTileByName(26, 1, 0, "text_is")
+	spawnTileByName(26, 2, 0, "text_stop")
+	
+	spawnTileByName(22, 3, 0, "text_dust")
+	spawnTileByName(23, 3, 0, "text_is")
+	spawnTileByName(24, 3, 0, "text_you")
+	spawnTileByName(25, 3, 0, "text_and")
+	spawnTileByName(26, 3, 0, "text_win")
+	
+	spawnTileByName(1, 19, 0, "text_tile")
+	spawnTileByName(2, 19, 0, "text_is")
+	spawnTileByName(3, 19, 0, "text_right")
+	spawnTileByName(4, 19, 0, "text_left")
+	
+	spawnTileByName(1, 20, 0, "text_text")
+	spawnTileByName(2, 20, 0, "text_is")
+	spawnTileByName(3, 20, 0, "text_right")
+	spawnTileByName(4, 20, 0, "text_left")
+	
+	for x in range(1, 4):
+		spawnTileByName(x, 21, 0, "tile")
+	
+	spawnTileByName(1, 22, 0, "text_orb")
+	spawnTileByName(2, 22, 0, "text_is")
+	spawnTileByName(3, 22, 0, "text_up")
+	spawnTileByName(4, 22, 0, "text_down")
+	
+	spawnTileByName(15, 19, 2, "me")
+	spawnTileByName(15, 20, 2, "me")
+	spawnTileByName(10, 22, 2, "me")
+	
+	for x in range(0, worldWidth):
+		spawnTileByName(x, 4, 0, "wall")
+		
+	for y in range(5, worldHeight):
+		spawnTileByName(0, y, 0, "wall")
+		spawnTileByName(worldWidth - 1, y, 0, "wall")
+		
+	for x in range(1, worldWidth - 1):
+		spawnTileByName(x, 18, 0, "wall")
+	
+	for x in range(17, worldWidth - 1):
+		for y in range(19, worldHeight):
+			spawnTileByName(x, y, 0, "wall")
+	
+	for x in range(12, 17):
+		for y in range(21, worldHeight):
+			spawnTileByName(x, y, 0, "wall")
+			
+	for x in range(2, worldWidth - 2):
+		for y in range(5, 18):
+			spawnTileByName(x, y, 0, "tile")
+			
+	for y in range(5, 18):
+		spawnTileByName(1, y, 0, "grass")
+		spawnTileByName(worldWidth - 2, y, 0, "brick")
+	
+	spawnTileByName(1, 6, 3, "baba")
+	spawnTileByName(1, 7, 3, "baba")
+	spawnTileByName(1, 8, 3, "baba")
+	
+	spawnTileByName(worldWidth - 2, 11, 3, "keke")
+	spawnTileByName(worldWidth - 2, 12, 3, "keke")
+	spawnTileByName(worldWidth - 2, 13, 3, "keke")
+	spawnTileByName(worldWidth - 2, 14, 3, "keke")
+	spawnTileByName(worldWidth - 2, 15, 3, "keke")
+	
+	spawnTileByName(14, 10, 0, "orb")
 
 func _ready():
 	
@@ -30,28 +191,14 @@ func _ready():
 	
 	loadPalette("default.png")
 	
-	spawnTileByName(1, 1, 0, "text_baba")
-	spawnTileByName(2, 1, 0, "text_is")
-	spawnTileByName(3, 1, 0, "text_you")
+	test_pong()
 	
-	spawnTileByName(1, 3, 0, "text_belt")
-	spawnTileByName(2, 3, 0, "text_is")
-	spawnTileByName(3, 3, 0, "text_shift")
-	
-	spawnTileByName(5, 3, 0, "text_box")
-	spawnTileByName(6, 3, 0, "text_is")
-	spawnTileByName(7, 3, 0, "text_push")
-	
-	spawnTileByName(7, 1, 0, "baba")
-	spawnTileByName(9, 1, 0, "box")
-	
-	spawnTileByName(2, 5, 0, "belt")
-	spawnTileByName(3, 5, 3, "belt")
-	spawnTileByName(3, 6, 0, "belt")
-	spawnTileByName(4, 6, 1, "belt")
-	
-	OS.set_window_size(Vector2(worldWidth * 24 * 2, worldHeight * 24 * 2))
-	get_node("/root/root/Camera2D").position = Vector2(round(float(worldWidth * 24) / 2.0), round(float(worldHeight * 24) / 2.0))
+	var cam = get_node("/root/root/Camera2D")
+	cam.position = Vector2(round(float(worldWidth * 24) / 2.0), round(float(worldHeight * 24) / 2.0))
+	var display_size = OS.get_screen_size()
+	var zoom = clamp(max(worldWidth, worldHeight) / (min(display_size.x, display_size.y) / 22), 0.5, 1)
+	cam.zoom = Vector2.ONE * zoom
+	OS.set_window_size(Vector2(worldWidth * 24 * (1 / zoom), worldHeight * 24 * (1 / zoom)))
 	
 	checkTheRules()
 	
@@ -105,6 +252,7 @@ func loadPalette(fileName) -> void:
 	VisualServer.set_default_clear_color(palette.get_pixel(6, 4))
 
 func _process(delta):
+	curTime = OS.get_ticks_msec() - startTime
 	animtimer += delta
 	if (animtimer > 0.2):
 		animtimer -= 0.2
@@ -115,7 +263,7 @@ func _process(delta):
 			tile.updateSpriteAnim()
 	if (worldLerpTime < 1):
 		worldLerpTime += delta * 10
-		if (worldLerpTime > 1):
+		if (worldLerpTime >= 1):
 			worldLerpTime = 1
 	alreadyFinished = []
 
@@ -123,7 +271,7 @@ var palettes = ["default.png", "abstract.png", "autumn.png", "contrast.png", "fa
 var curpal = 0
 
 func _input(ev):
-	if (worldLerpTime != 1):
+	if (worldLerpTime != 1 || !controlsActive):
 		return
 	if Input.is_key_pressed(KEY_P):
 		curpal += 1
@@ -146,12 +294,14 @@ func _input(ev):
 	if (unappliedMovement != null):
 		worldLerpTime = 0
 		updateWorld()
-		checkTheRules()
+		if (unappliedRules):
+			unappliedRules = false
+			checkTheRules()
 
 func spawnTileByName(x, y, direction, tileName) -> void:
 	spawnTile(x, y, direction, findTileId(tileName))
 
-func spawnTile(x, y, direction, name) -> void:
+func spawnTile(x, y, direction, name) -> Node:
 	var spawnedTile = tilePrefab.instance()
 	add_child(spawnedTile)
 	spawnedTile.main = self
@@ -160,11 +310,14 @@ func spawnTile(x, y, direction, name) -> void:
 	spawnedTile.updatePos(x, y)
 	spawnedTile.position = Vector2(x, y) * 24
 	tiles.append(spawnedTile)
+	return spawnedTile
 	
 func changeTileType(tile, name, forceLightUp = false) -> void:
 	
 	tile.tileName = database[name]["name"]
 	tile.tileId = name
+	
+	tile.isFloating = ifRuleActive(tile.tileName, "is", "float")
 	
 	var rawType = database[name]["type"]
 	if (rawType == 0):
@@ -190,10 +343,10 @@ func changeTileType(tile, name, forceLightUp = false) -> void:
 		var spriteName = database[name]["sprite"]
 		loadSprite(name, spriteName + "_0")
 		if (tile.tilingMode == 3):
-			for i in [0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27]:
+			for i in [1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27]:
 				loadSprite(name, spriteName + "_" + str(i))
 		elif (tile.tilingMode == 2):
-			for i in [1, 2, 3, 7, 8, 9, 10, 16, 17, 18, 19, 24, 25, 26, 27, 11, 15, 23, 31]:
+			for i in [1, 2, 3, 7, 8, 9, 10, 16, 17, 18, 19, 24, 25, 26, 27, 31, 11, 15, 23]:
 				loadSprite(name, spriteName + "_" + str(i))
 		elif (tile.tilingMode == 1):
 			for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]:
@@ -213,7 +366,9 @@ func changeTileType(tile, name, forceLightUp = false) -> void:
 func loadSprite(name, spriteName) -> void:
 	loadedSprites[name].append([load("res://sprites/" + spriteName + "_1.png"), load("res://sprites/" + spriteName + "_2.png"), load("res://sprites/" + spriteName + "_3.png")])
 
-func destroyTile(tile) -> void:
+func destroyTile(tile, forced = false) -> void:
+	if (!forced && ifRuleActive(tile.tileName, "is", "safe")):
+		return
 	var hasReplacement = ifOperatorUsed(tile.tileName, "has")
 	if (hasReplacement != ""):
 		changeTileType(tile, findTileId(hasReplacement))
@@ -241,46 +396,170 @@ func updateWorld() -> void:
 	alreadyFinished = []
 	var justTeleported = []
 	var justShifted = []
+	var justSpawned = []
 	for tile in tiles:
 		if (tile.tilingMode == 3):
 			tile.updateWalkFrame()
 			tile.updateSpriteAnim()
-		if (unappliedMovement != null && ifRuleActive(tile.tileName, "is", "you")):
-			push_tile(tile, unappliedMovement.x, unappliedMovement.y)
-		if (ifRuleActive(tile.tileName, "is", "move")):
-			var forward = getForward(tile)
-			var success = push_tile(tile, forward.x, forward.y)
-			if (!success):
-				tile.direction = 2 if (tile.direction == 0) else 0 if (tile.direction == 2) else 1 if (tile.direction == 3) else 3
-				tile.updateSpriteAnim()
-				forward = getForward(tile)
-				push_tile(tile, forward.x, forward.y)
-		if (ifRuleActive(tile.tileName, "is", "fall")):
-			yeet_tile(tile, 0, 1)
-		if (ifRuleActive(tile.tileName, "is", "tele")):
-			var needsToBeTeleported = []
-			var nextInstance = null
-			for subtile in tiles:
-				if (subtile == tile):
-					continue
-				if (nextInstance == null && subtile.tileId == tile.tileId):
-					nextInstance = subtile
-				elif (!justTeleported.has(subtile) && subtile.pos == tile.pos):
-					needsToBeTeleported.append(subtile)
-			for subtile in needsToBeTeleported:
-				subtile.updatePos(nextInstance.pos.x, nextInstance.pos.y)
-				justTeleported.append(subtile)
-		if (ifRuleActive(tile.tileName, "is", "shift")):
-			var needsToBePushed = []
-			var forward = getForward(tile)
-			for subtile in tiles:
-				if (subtile == tile):
-					continue
-				if (!justShifted.has(subtile) && subtile.pos == tile.pos):
-					needsToBePushed.append(subtile)
-			for subtile in needsToBePushed:
-				if (push_tile(subtile, forward.x, forward.y)):
-					justShifted.append(subtile)
+		if (ifOperatorUsed(tile.tileName, "is")):
+			tile.isFloating = ifPropertyUsed(tile.tileName, "is", "float")
+			tile.isSleeping = ifPropertyUsed(tile.tileName, "is", "sleep")
+			tile.visible = !ifPropertyUsed(tile.tileName, "is", "hide")
+			if (unappliedMovement != null && ifPropertyUsed(tile.tileName, "is", "you") && !tile.isSleeping && unappliedMovement != Vector2.ZERO):
+				if (ifPropertyUsed(tile.tileName, "is", "up")):
+					push_tile(tile, 0, -1)
+				elif (ifPropertyUsed(tile.tileName, "is", "down")):
+					push_tile(tile, 0, 1)
+				elif (ifPropertyUsed(tile.tileName, "is", "left")):
+					push_tile(tile, -1, 0)
+				elif (ifPropertyUsed(tile.tileName, "is", "right")):
+					push_tile(tile, 1, 0)
+				else:
+					push_tile(tile, unappliedMovement.x, unappliedMovement.y)
+		else:
+			tile.isFloating = false
+			tile.isSleeping = false
+			tile.visible = true
+	for tile in tiles:
+		if (ifOperatorUsed(tile.tileName, "is")):
+			if (ifPropertyUsed(tile.tileName, "is", "move") && !tile.isSleeping):
+				for i in range(0, worldRules[tile.tileName]["is"]["move"]):
+					if (ifPropertyUsed(tile.tileName, "is", "up")):
+						push_tile(tile, 0, -1)
+					elif (ifPropertyUsed(tile.tileName, "is", "down")):
+						push_tile(tile, 0, 1)
+					elif (ifPropertyUsed(tile.tileName, "is", "left")):
+						push_tile(tile, -1, 0)
+					elif (ifPropertyUsed(tile.tileName, "is", "right")):
+						push_tile(tile, 1, 0)
+					else:
+						var forward = getForward(tile)
+						var success = push_tile(tile, forward.x, forward.y)
+						if (!success):
+							tile.direction = 2 if (tile.direction == 0) else 0 if (tile.direction == 2) else 1 if (tile.direction == 3) else 3
+							tile.updateSpriteAnim()
+							forward = getForward(tile)
+							push_tile(tile, forward.x, forward.y)
+	for tile in tiles:
+		if (ifOperatorUsed(tile.tileName, "is")):
+			if (ifPropertyUsed(tile.tileName, "is", "shift")):
+				var needsToBePushed = []
+				var forward = getForward(tile)
+				for subtile in tiles:
+					if (subtile == tile):
+						continue
+					if (!justShifted.has(subtile) && subtile.pos == tile.pos):
+						needsToBePushed.append(subtile)
+				for subtile in needsToBePushed:
+					if (push_tile(subtile, forward.x, forward.y)):
+						justShifted.append(subtile)
+			if (ifPropertyUsed(tile.tileName, "is", "fall")):
+				yeet_tile(tile, 0, 1)
+	# todo (NOUN IS NOT NOUN) or (NOUN IS EMPTY)
+	for tile in tiles:
+		if (ifOperatorUsed(tile.tileName, "is")):
+			if (ifPropertyUsed(tile.tileName, "is", "done")):
+				destroyTile(tile, true)
+				continue
+	# todo eat
+	for tile in tiles:
+		if (ifOperatorUsed(tile.tileName, "is")):
+			if (ifPropertyUsed(tile.tileName, "is", "weak")):
+				for subtile in tiles:
+					if (subtile != tile && subtile.pos == tile.pos):
+						destroyTile(tile)
+						break
+	for tile in tiles:
+		if (ifOperatorUsed(tile.tileName, "is")):
+			if (ifPropertyUsed(tile.tileName, "is", "sink")):
+				for subtile in tiles:
+					if (subtile != tile && subtile.pos == tile.pos):
+						destroyTile(subtile)
+						destroyTile(tile)
+						break
+	for tile in tiles:
+		if (ifOperatorUsed(tile.tileName, "is")):
+			if (ifPropertyUsed(tile.tileName, "is", "hot")):
+				for subtile in tiles:
+					if (subtile.pos == tile.pos && ifRuleActive(subtile.tileName, "is", "melt")):
+						destroyTile(subtile)
+	for tile in tiles:
+		if (ifOperatorUsed(tile.tileName, "is")):
+			if (ifPropertyUsed(tile.tileName, "is", "defeat")):
+				for subtile in tiles:
+					if (subtile.pos == tile.pos && ifRuleActive(subtile.tileName, "is", "you")):
+						destroyTile(subtile)
+	for tile in tiles:
+		if (ifOperatorUsed(tile.tileName, "is")):
+			if (ifPropertyUsed(tile.tileName, "is", "shut")):
+				for subtile in tiles:
+					if (ifRuleActive(subtile.tileName, "is", "open")):
+						destroyTile(subtile)
+						destroyTile(tile)
+						break
+	# unspecified order
+	for tile in tiles:
+		if (justSpawned.has(tile)):
+			continue
+		if (ifOperatorUsed(tile.tileName, "is")):
+			if (ifPropertyUsed(tile.tileName, "is", "tele")):
+				var needsToBeTeleported = []
+				var nextInstance = null
+				for subtile in tiles:
+					if (subtile == tile):
+						continue
+					if (nextInstance == null && subtile.tileId == tile.tileId):
+						nextInstance = subtile
+					elif (!justTeleported.has(subtile) && subtile.pos == tile.pos):
+						needsToBeTeleported.append(subtile)
+				for subtile in needsToBeTeleported:
+					subtile.updatePos(nextInstance.pos.x, nextInstance.pos.y)
+					justTeleported.append(subtile)
+			if (ifPropertyUsed(tile.tileName, "is", "win") || ifPropertyUsed(tile.tileName, "is", "end")):
+				for subtile in tiles:
+					if (subtile.pos == tile.pos && ifRuleActive(subtile.tileName, "is", "you")):
+						controlsActive = false
+			if (ifPropertyUsed(tile.tileName, "is", "bonus")):
+				for subtile in tiles:
+					if (subtile.pos == tile.pos && ifRuleActive(subtile.tileName, "is", "you")):
+						destroyTile(tile)
+						break
+			if (ifPropertyUsed(tile.tileName, "is", "more")):
+				var upFree = tile.pos.y > 0
+				var downFree = tile.pos.y < worldHeight - 1
+				var leftFree = tile.pos.x > 0
+				var rightFree = tile.pos.x < worldWidth - 1
+				var counter = 0
+				for subtile in tiles:
+					if (subtile.tileId == tile.tileId || is_tile_solid(subtile)):
+						if (upFree && subtile.pos == tile.pos + Vector2.UP):
+							upFree = false
+							counter += 1
+							if (counter >= 4):
+								break
+						elif (downFree && subtile.pos == tile.pos + Vector2.DOWN):
+							downFree = false
+							counter += 1
+							if (counter >= 4):
+								break
+						elif (leftFree && subtile.pos == tile.pos + Vector2.LEFT):
+							leftFree = false
+							counter += 1
+							if (counter >= 4):
+								break
+						elif (rightFree && subtile.pos == tile.pos + Vector2.RIGHT):
+							rightFree = false
+							counter += 1
+							if (counter >= 4):
+								break
+				if (upFree):
+					justSpawned.append(spawnTile(tile.pos.x, tile.pos.y - 1, tile.direction, tile.tileId))
+				if (downFree):
+					justSpawned.append(spawnTile(tile.pos.x, tile.pos.y + 1, tile.direction, tile.tileId))
+				if (leftFree):
+					justSpawned.append(spawnTile(tile.pos.x - 1, tile.pos.y, tile.direction, tile.tileId))
+				if (rightFree):
+					justSpawned.append(spawnTile(tile.pos.x + 1, tile.pos.y, tile.direction, tile.tileId))
 	unappliedMovement = null
 
 func applyAutoTile(tile) -> void:
@@ -350,6 +629,7 @@ func yeet_tile(tile, delta_x, delta_y) -> void:
 		if (!push_tile(tile, delta_x, delta_y)):
 			return;
 
+# todo add open/shut here
 func push_tile(tile, delta_x, delta_y) -> bool:
 	if (ifRuleActive(tile.tileName, "is", "fall") && delta_y < 0):
 		return false
@@ -382,6 +662,8 @@ func push_tile(tile, delta_x, delta_y) -> bool:
 	if (tile.tilingMode == 1):
 		applyAutoTile(tile)
 	alreadyFinished.append(tile)
+	if (tile.tileType != 0):
+		unappliedRules = true
 	return true
 
 func pull_tile(tile, delta_x, delta_y) -> bool:
@@ -447,13 +729,19 @@ func is_tile_solid(tile) -> bool:
 	return false
 
 func checkTheRules() -> void:
-	worldRules.clear()
+	var worldRulesOld = worldRules
+	worldRules = {}
 	for tile in tiles:
 		if (tile.tileType != 0):
 			changeTileType(tile, tile.tileId)
 	for tile in tiles:
-		if (tile.tileType == 1):
+		if (tile.tileType == 1 || ifRuleActiveRetro(tile.tileName, "is", "word", worldRulesOld)):
 			checkTileRules(tile)
+	for tile in tiles:
+		if (ifOperatorUsed(tile.tileName, "is")):
+			tile.isFloating = ifPropertyUsed(tile.tileName, "is", "float")
+			tile.isSleeping = ifPropertyUsed(tile.tileName, "is", "sleep")
+			tile.visible = !ifPropertyUsed(tile.tileName, "is", "hide")
 
 func checkTileRules(tile) -> void:
 	for secondTile in tiles:
@@ -471,18 +759,72 @@ func checkTileRules(tile) -> void:
 							applyRule(tile, secondTile, thirdTile)
 
 func applyRule(tile1, tile2, tile3) -> void:
-	var affectedTile = tile1.tileName.split("_")[1]
+	var affectedTile = tile1.tileName.split("_")[1] if "text_" in tile1.tileName else tile1.tileName
 	var operator = tile2.tileName.split("_")[1]
 	var action = tile3.tileName.split("_")[1]
 	var ifReplacement = tile3.tileType == 1
 	if (operator == "is"):
 		if (ifReplacement):
-			if (ifRuleActive(affectedTile, "is", affectedTile)):
-				return
+			if (affectedTile != action):
+				if (ifRuleActive(affectedTile, "is", affectedTile)):
+					return
+				if (affectedTile == "text"):
+					for subTile in tiles:
+						if (subTile.tileType != 0):
+							if action == "text":
+								changeTileType(subTile, findTileId("text_" + affectedTile))
+							else:
+								changeTileType(subTile, findTileId(action))
+							subTile.updateSpriteAnim()
+					unappliedRules = true
+					worldRules = {}
+				else:
+					for subTile in tiles:
+						if (subTile.tileName == affectedTile):
+							if action == "text":
+								changeTileType(subTile, findTileId("text_" + affectedTile))
+								unappliedRules = true
+							else:
+								changeTileType(subTile, findTileId(action))
+							subTile.updateSpriteAnim()
+		elif (action == "win" && ifRuleActive(affectedTile, "is", "you") || action == "you" && ifRuleActive(affectedTile, "is", "win")):
+			controlsActive = false
+		elif (action == "defeat" && ifRuleActive(affectedTile, "is", "you") || action == "you" && ifRuleActive(affectedTile, "is", "defeat")):
 			for subTile in tiles:
 				if (subTile.tileName == affectedTile):
-					changeTileType(subTile, findTileId(action))
+					destroyTile(subTile)
+		elif (action == "hot" && ifRuleActive(affectedTile, "is", "melt") || action == "melt" && ifRuleActive(affectedTile, "is", "hot")):
+			for subTile in tiles:
+				if (subTile.tileName == affectedTile):
+					destroyTile(subTile)
+		elif (action == "shut" && ifRuleActive(affectedTile, "is", "open") || action == "open" && ifRuleActive(affectedTile, "is", "shut")):
+			for subTile in tiles:
+				if (subTile.tileName == affectedTile):
+					destroyTile(subTile)
+		elif (action == "up"):
+			for subTile in tiles:
+				if (subTile.tileName == affectedTile):
+					subTile.direction = 1
 					subTile.updateSpriteAnim()
+		elif (action == "down"):
+			for subTile in tiles:
+				if (subTile.tileName == affectedTile):
+					subTile.direction = 3
+					subTile.updateSpriteAnim()
+		elif (action == "left"):
+			for subTile in tiles:
+				if (subTile.tileName == affectedTile):
+					subTile.direction = 2
+					subTile.updateSpriteAnim()
+		elif (action == "right"):
+			for subTile in tiles:
+				if (subTile.tileName == affectedTile):
+					subTile.direction = 0
+					subTile.updateSpriteAnim()
+		elif (action == "done"):
+			for subTile in tiles:
+				if (subTile.tileName == affectedTile):
+					destroyTile(subTile)
 	saveRule(affectedTile, operator, action)
 	changeTileType(tile1, tile1.tileId, true)
 	changeTileType(tile2, tile2.tileId, true)
@@ -501,7 +843,13 @@ func saveRule(tile_name, operator, action) -> void:
 func ifRuleActive(tile_name, operator, action) -> bool:
 	return (worldRules.has(tile_name) || worldRules.has(tile_name + "2") || worldRules.has(tile_name + "3")) && worldRules[tile_name].has(operator) && worldRules[tile_name][operator].has(action)
 
+func ifRuleActiveRetro(tile_name, operator, action, worldRules) -> bool:
+	return (worldRules.has(tile_name) || worldRules.has(tile_name + "2") || worldRules.has(tile_name + "3")) && worldRules[tile_name].has(operator) && worldRules[tile_name][operator].has(action)
+
 func ifOperatorUsed(tile_name, operator) -> String:
 	if (worldRules.has(tile_name) && worldRules[tile_name].has(operator)):
 		return worldRules[tile_name][operator][worldRules[tile_name][operator].keys()[0]]
 	return ""
+
+func ifPropertyUsed(tile_name, operator, action) -> bool:
+	return worldRules[tile_name][operator].has(action)

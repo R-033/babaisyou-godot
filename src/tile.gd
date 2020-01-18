@@ -5,6 +5,8 @@ var tileId = ""
 var tileType = 0
 var direction = 0
 var autoTileValue = 0
+var isFloating = false
+var isSleeping = false
 
 var atlasCurrentWalkFrame = 0
 
@@ -37,7 +39,18 @@ func updateSpriteColor(color) -> void:
 	modulate = color
 
 func updateSpriteAnim() -> void:
-	var xpos = autoTileValue + direction * ((4 if (tilingMode == 2 || tilingMode == 3) else 0)) + atlasCurrentWalkFrame
+	var xpos;
+	if (tilingMode == 1):
+		xpos = autoTileValue
+	elif (tilingMode == 2):
+		if (isSleeping):
+			xpos = 16 + direction
+		else:
+			xpos = direction * 4 + atlasCurrentWalkFrame
+	elif (tilingMode == 3):
+		xpos = direction * 4 + atlasCurrentWalkFrame
+	else:
+		xpos = 0
 	texture = main.loadedSprites[tileId][xpos][main.worldAnimationFrame]
 	
 func toggleCross(enable) -> void:
@@ -45,3 +58,4 @@ func toggleCross(enable) -> void:
 	
 func _process(delta):
 	position = position.linear_interpolate(pos * 24, delta * 10)
+	offset.y = (-12 + sin(main.curTime / 200.0) * 3) if isFloating else 0
