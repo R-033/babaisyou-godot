@@ -190,7 +190,16 @@ func _ready():
 	
 	loadPalette("default.png")
 	
-	test_pong()
+	#test_pong()
+	
+	spawnTileByName(1, 1, 0, "text_baba")
+	spawnTileByName(2, 1, 0, "text_is")
+	spawnTileByName(3, 1, 0, "text_you")
+	spawnTileByName(4, 1, 0, "text_and")
+	spawnTileByName(5, 1, 0, "text_stop")
+	
+	spawnTileByName(1, 3, 0, "baba")
+	spawnTileByName(2, 3, 0, "baba")
 	
 	var cam = get_node("/root/root/Camera2D")
 	cam.position = Vector2(round(float(worldWidth * 24) / 2.0), round(float(worldHeight * 24) / 2.0))
@@ -662,7 +671,7 @@ func push_tile(tile, delta_x, delta_y) -> bool:
 			continue
 		if (pushedTile.pos.x == newX && pushedTile.pos.y == newY):
 			if (is_tile_solid(pushedTile)):
-				if (!can_be_pushed(pushedTile, delta_x, delta_y)):
+				if (!can_be_pushed(pushedTile, delta_x, delta_y, tile)):
 					return false
 				pushableTiles.append(pushedTile)
 		elif (pushedTile.pos.x == oppositeX && pushedTile.pos.y == oppositeY):
@@ -671,7 +680,8 @@ func push_tile(tile, delta_x, delta_y) -> bool:
 					continue
 				pullableTiles.append(pushedTile)
 	for pushedTile in pushableTiles:
-		push_tile(pushedTile, delta_x, delta_y)
+		if (pushedTile.tileName != tile.tileName):
+			push_tile(pushedTile, delta_x, delta_y)
 	for pulledTile in pullableTiles:
 		pull_tile(pulledTile, delta_x, delta_y)
 	tile.updatePos(newX, newY)
@@ -706,19 +716,20 @@ func pull_tile(tile, delta_x, delta_y) -> bool:
 	alreadyFinished.append(tile)
 	return true
 
-func can_be_pushed(tile, delta_x, delta_y) -> bool:
+func can_be_pushed(tile, delta_x, delta_y, referenceTile) -> bool:
 	var newX = tile.pos.x + delta_x
 	var newY = tile.pos.y + delta_y
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
 		return false
-	if (ifRuleActive(tile.tileName, "is", "stop", tile)):
-		return false
-	if (tile.tileType == 0 && !ifRuleActive(tile.tileName, "is", "push", tile)):
-		return false
+	if (referenceTile.tileName != tile.tileName || !ifRuleActive(tile.tileName, "is", "you", referenceTile) && !ifRuleActive(tile.tileName, "is", "move", referenceTile)):
+		if (ifRuleActive(tile.tileName, "is", "stop", tile)):
+			return false
+		if (tile.tileType == 0 && !ifRuleActive(tile.tileName, "is", "push", tile)):
+			return false
 	for pushedTile in tiles:
 		if (pushedTile.pos.x == newX && pushedTile.pos.y == newY):
 			if (is_tile_solid(pushedTile)):
-				if (!can_be_pushed(pushedTile, delta_x, delta_y)):
+				if (!can_be_pushed(pushedTile, delta_x, delta_y, tile)):
 					return false
 	return true
 
