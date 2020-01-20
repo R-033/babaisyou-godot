@@ -58,4 +58,4 @@ func toggleCross(enable) -> void:
 	
 func _process(delta):
 	position = position.linear_interpolate(pos * 24, delta * 10)
-	offset.y = (-12 + sin(main.curTime / 200.0) * 3) if isFloating else 0
+	offset.y = (-6 + sin(main.curTime / 200.0) * 3) if isFloating else 0
