@@ -7,15 +7,17 @@ extends Node
 # todo turn
 # todo deturn
 # todo still
-# todo swap
 # todo level
 # todo empty
+# todo bonus
 
 var loaded
 
 var tiles = []
 var worldRulesStatic = {}
 var worldRulesDynamic = []
+
+var rulesStatic = {}
 
 var worldWidth = 10
 var worldHeight = 10
@@ -180,48 +182,27 @@ func test_pong() -> void:
 	spawnTileByName(1, 7, 3, "baba")
 	spawnTileByName(1, 8, 3, "baba")
 	
-	spawnTileByName(worldWidth - 2, 11, 3, "keke")
-	spawnTileByName(worldWidth - 2, 12, 3, "keke")
-	spawnTileByName(worldWidth - 2, 13, 3, "keke")
-	spawnTileByName(worldWidth - 2, 14, 3, "keke")
-	spawnTileByName(worldWidth - 2, 15, 3, "keke")
+	spawnTileByName(worldWidth - 2, 11, 1, "keke")
+	spawnTileByName(worldWidth - 2, 12, 1, "keke")
+	spawnTileByName(worldWidth - 2, 13, 1, "keke")
+	spawnTileByName(worldWidth - 2, 14, 1, "keke")
+	spawnTileByName(worldWidth - 2, 15, 1, "keke")
 	
 	spawnTileByName(14, 10, 0, "orb")
 
 func test_syntax() -> void:
-	worldWidth = 27
-	worldHeight = 23
-	for y in range(19, 23):
-		for x in range(1, 4):
+	worldWidth = 21
+	worldHeight = 15
+	
+	spawnTileByName(0, 0, 0, "text_baba")
+	spawnTileByName(1, 0, 0, "text_is")
+	spawnTileByName(2, 0, 0, "text_you")
+	
+	spawnTileByName(3, 0, 0, "baba")
+	
+	for y in range(0, worldHeight):
+		for x in range(0, worldWidth):
 			spawnTileByName(x, y, 0, "tile")
-	
-	spawnTileByName(0, 22, 0, "wall")
-	spawnTileByName(1, 22, 0, "text_orb")
-	spawnTileByName(2, 22, 0, "text_is")
-	spawnTileByName(3, 22, 0, "text_up")
-	spawnTileByName(4, 22, 0, "text_down")
-	
-	spawnTileByName(6, 1, 0, "text_baba")
-	spawnTileByName(7, 1, 0, "text_is")
-	spawnTileByName(8, 1, 0, "text_you")
-	
-	spawnTileByName(6, 2, 0, "text_tile")
-	spawnTileByName(7, 2, 0, "text_near")
-	spawnTileByName(8, 2, 0, "text_baba")
-	spawnTileByName(9, 2, 0, "text_is")
-	spawnTileByName(10, 2, 0, "text_stop")
-	
-	spawnTileByName(6, 3, 0, "text_wall")
-	spawnTileByName(7, 3, 0, "text_is")
-	spawnTileByName(8, 3, 0, "text_stop")
-	
-	spawnTileByName(6, 4, 0, "text_text")
-	spawnTileByName(7, 4, 0, "text_on")
-	spawnTileByName(8, 4, 0, "text_tile")
-	spawnTileByName(9, 4, 0, "text_is")
-	spawnTileByName(10, 4, 0, "text_swap")
-	
-	spawnTileByName(7, 22, 2, "baba")
 
 func test_paint() -> void:
 	worldWidth = 12
@@ -366,14 +347,12 @@ func _process(delta):
 			tile.updateSpriteAnim()
 	if (worldLerpTime < 1):
 		worldLerpTime += delta * 10
-		if (worldLerpTime >= 1):
-			worldLerpTime = 1
 
 var palettes = ["default.png", "abstract.png", "autumn.png", "contrast.png", "factory.png", "garden.png", "marshmallow.png", "mono.png", "mountain.png", "ocean.png", "ruins.png", "space.png", "swamp.png", "test.png", "variant.png", "volcano.png"]
 var curpal = 0
 
 func _input(ev):
-	if (worldLerpTime != 1 || !controlsActive):
+	if (worldLerpTime < 1 || !controlsActive):
 		return
 	if Input.is_key_pressed(KEY_P):
 		curpal += 1
@@ -520,86 +499,94 @@ func getForward(tile) -> Vector2:
 func tileSorter(a, b):
 	return a.pos.y * worldWidth + a.pos.x < b.pos.y * worldWidth + b.pos.x
 
-func moveDirFix(tile, forward, appliableStaticRulesCache) -> void:
+func moveDirFix(tile, forward, rulesStatic, rulesDynamic) -> void:
 	for subTile in tiles:
-		if (ifRuleActive_cached(subTile.tileName, "is", "move", appliableStaticRulesCache[subTile]) && !subTile.isSleeping):
+		if (ifRuleActive_cached(subTile.tileName, "is", "move", rulesStatic[subTile.tileName], rulesDynamic[subTile]) && !subTile.isSleeping):
 			if (subTile.pos == tile.pos + forward):
 				subTile.direction = tile.direction
 				subTile.updateSpriteAnim()
-				moveDirFix(subTile, forward, appliableStaticRulesCache)
+				moveDirFix(subTile, forward, rulesStatic, rulesDynamic)
 
 func updateWorld() -> void:
 	var justTeleported = []
 	var justShifted = []
 	var justSpawned = []
-	var appliableStaticRulesCache = {}
+	var rulesDynamic = {}
 	tiles.sort_custom(self, "tileSorter")
 	var tilesTrimmed = []
 	for tile in tiles:
-		appliableStaticRulesCache[tile] = getAppliableRules(tile.tileName, worldRulesStatic, worldRulesDynamic, tile)
-		if (appliableStaticRulesCache[tile].size() > 0):
-			tilesTrimmed.append(tile)
-	for tile in tilesTrimmed:
 		if (tile.tilingMode == 3):
 			tile.updateWalkFrame()
 			tile.updateSpriteAnim()
-		if (ifOperatorUsed_cached(tile.tileName, "is", appliableStaticRulesCache[tile])):
-			tile.isFloating = ifRuleActive_cached(tile.tileName, "is", "float", appliableStaticRulesCache[tile])
-			tile.isSleeping = ifRuleActive_cached(tile.tileName, "is", "sleep", appliableStaticRulesCache[tile])
-			tile.visible = !ifRuleActive_cached(tile.tileName, "is", "hide", appliableStaticRulesCache[tile])
-			if (unappliedMovement != null && ifRuleActive_cached(tile.tileName, "is", "you", appliableStaticRulesCache[tile]) && !tile.isSleeping && unappliedMovement != Vector2.ZERO):
-				if (ifRuleActive_cached(tile.tileName, "is", "up", appliableStaticRulesCache[tile])):
-					push_tile(tile, 0, -1, appliableStaticRulesCache, true, "you")
-				elif (ifRuleActive_cached(tile.tileName, "is", "down", appliableStaticRulesCache[tile])):
-					push_tile(tile, 0, 1, appliableStaticRulesCache, true, "you")
-				elif (ifRuleActive_cached(tile.tileName, "is", "left", appliableStaticRulesCache[tile])):
-					push_tile(tile, -1, 0, appliableStaticRulesCache, true, "you")
-				elif (ifRuleActive_cached(tile.tileName, "is", "right", appliableStaticRulesCache[tile])):
-					push_tile(tile, 1, 0, appliableStaticRulesCache, true, "you")
-				else:
-					push_tile(tile, unappliedMovement.x, unappliedMovement.y, appliableStaticRulesCache, true, "you")
+		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, tile)
+		if (rulesStatic[tile.tileName].size() > 0 || rulesDynamic[tile].size() > 0):
+			tilesTrimmed.append(tile)
+			tile.isFloating = ifRuleActive_cached(tile.tileName, "is", "float", rulesStatic[tile.tileName], rulesDynamic[tile])
+			tile.isSleeping = ifRuleActive_cached(tile.tileName, "is", "sleep", rulesStatic[tile.tileName], rulesDynamic[tile])
+			tile.visible = !ifRuleActive_cached(tile.tileName, "is", "hide", rulesStatic[tile.tileName], rulesDynamic[tile])
 		else:
 			tile.isFloating = false
 			tile.isSleeping = false
 			tile.visible = true
+	var rs
+	var rd
+	for tile in tilesTrimmed:
+		rs = rulesStatic[tile.tileName]
+		rd = rulesDynamic[tile]
+		if (unappliedMovement != null && ifRuleActive_cached(tile.tileName, "is", "you", rs, rd) && !tile.isSleeping && unappliedMovement != Vector2.ZERO):
+			if (ifRuleActive_cached(tile.tileName, "is", "up", rs, rd)):
+				push_tile(tile, 0, -1, rulesStatic, rulesDynamic, true, "you")
+			elif (ifRuleActive_cached(tile.tileName, "is", "down", rs, rd)):
+				push_tile(tile, 0, 1, rulesStatic, rulesDynamic, true, "you")
+			elif (ifRuleActive_cached(tile.tileName, "is", "left", rs, rd)):
+				push_tile(tile, -1, 0, rulesStatic, rulesDynamic, true, "you")
+			elif (ifRuleActive_cached(tile.tileName, "is", "right", rs, rd)):
+				push_tile(tile, 1, 0, rulesStatic, rulesDynamic, true, "you")
+			else:
+				push_tile(tile, unappliedMovement.x, unappliedMovement.y, rulesStatic, rulesDynamic, true, "you")
 	if (unappliedRules):
 		unappliedRules = false
 		checkTheRules()
 	tilesTrimmed = []
 	for tile in tiles:
-		appliableStaticRulesCache[tile] = getAppliableRules(tile.tileName, worldRulesStatic, worldRulesDynamic, tile)
-		if (appliableStaticRulesCache[tile].size() > 0):
+		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, tile)
+		if (rulesStatic[tile.tileName].size() > 0 || rulesDynamic[tile].size() > 0):
 			tilesTrimmed.append(tile)
 	for tile in tilesTrimmed:
-		if (ifRuleActive_cached(tile.tileName, "is", "move", appliableStaticRulesCache[tile]) && !tile.isSleeping):
-			for i in range(0, getRuleStackValue_cached(tile.tileName, "is", "move", appliableStaticRulesCache[tile])):
-				if (ifRuleActive_cached(tile.tileName, "is", "up", appliableStaticRulesCache[tile])):
-					push_tile(tile, 0, -1, appliableStaticRulesCache, true)
-				elif (ifRuleActive_cached(tile.tileName, "is", "down", appliableStaticRulesCache[tile])):
-					push_tile(tile, 0, 1, appliableStaticRulesCache, true)
-				elif (ifRuleActive_cached(tile.tileName, "is", "left", appliableStaticRulesCache[tile])):
-					push_tile(tile, -1, 0, appliableStaticRulesCache, true)
-				elif (ifRuleActive_cached(tile.tileName, "is", "right", appliableStaticRulesCache[tile])):
-					push_tile(tile, 1, 0, appliableStaticRulesCache, true)
+		rs = rulesStatic[tile.tileName]
+		rd = rulesDynamic[tile]
+		if (ifRuleActive_cached(tile.tileName, "is", "move", rs, rd) && !tile.isSleeping):
+			for i in range(0, getRuleStackValue_cached(tile.tileName, "is", "move", rs, rd)):
+				if (ifRuleActive_cached(tile.tileName, "is", "up", rs, rd)):
+					push_tile(tile, 0, -1, rulesStatic, rulesDynamic, true)
+				elif (ifRuleActive_cached(tile.tileName, "is", "down", rs, rd)):
+					push_tile(tile, 0, 1, rulesStatic, rulesDynamic, true)
+				elif (ifRuleActive_cached(tile.tileName, "is", "left", rs, rd)):
+					push_tile(tile, -1, 0, rulesStatic, rulesDynamic, true)
+				elif (ifRuleActive_cached(tile.tileName, "is", "right", rs, rd)):
+					push_tile(tile, 1, 0, rulesStatic, rulesDynamic, true)
 				else:
 					var forward = getForward(tile)
-					var success = push_tile(tile, forward.x, forward.y, appliableStaticRulesCache, true)
+					var success = push_tile(tile, forward.x, forward.y, rulesStatic, rulesDynamic, true)
 					if (!success):
 						tile.direction = 2 if (tile.direction == 0) else 0 if (tile.direction == 2) else 1 if (tile.direction == 3) else 3
 						tile.updateSpriteAnim()
 						forward = getForward(tile)
-						moveDirFix(tile, forward, appliableStaticRulesCache)
-						push_tile(tile, forward.x, forward.y, appliableStaticRulesCache, true)
+						moveDirFix(tile, forward, rulesStatic, rulesDynamic)
+						push_tile(tile, forward.x, forward.y, rulesStatic, rulesDynamic, true)
 	if (unappliedRules):
 		unappliedRules = false
 		checkTheRules()
 	tilesTrimmed = []
 	for tile in tiles:
-		appliableStaticRulesCache[tile] = getAppliableRules(tile.tileName, worldRulesStatic, worldRulesDynamic, tile)
-		if (appliableStaticRulesCache[tile].size() > 0):
+		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, tile)
+		if (rulesStatic[tile.tileName].size() > 0 || rulesDynamic[tile].size() > 0):
 			tilesTrimmed.append(tile)
-	for tile in tilesTrimmed:
-		if (ifRuleActive_cached(tile.tileName, "is", "shift", appliableStaticRulesCache[tile])):
+		else:
+			continue
+		rs = rulesStatic[tile.tileName]
+		rd = rulesDynamic[tile]
+		if (ifRuleActive_cached(tile.tileName, "is", "shift", rs, rd)):
 			var needsToBePushed = []
 			var forward = getForward(tile)
 			for subtile in tiles:
@@ -608,9 +595,9 @@ func updateWorld() -> void:
 				if (!justShifted.has(subtile) && subtile.pos == tile.pos):
 					needsToBePushed.append(subtile)
 			for subtile in needsToBePushed:
-				if (push_tile(subtile, forward.x, forward.y, appliableStaticRulesCache)):
+				if (push_tile(subtile, forward.x, forward.y, rulesStatic, rulesDynamic)):
 					justShifted.append(subtile)
-		if (ifRuleActive_cached(tile.tileName, "is", "tele", appliableStaticRulesCache[tile])):
+		if (ifRuleActive_cached(tile.tileName, "is", "tele", rs, rd)):
 			var needsToBeTeleported = []
 			var nextInstance = null
 			for subtile in tiles:
@@ -622,32 +609,26 @@ func updateWorld() -> void:
 					needsToBeTeleported.append(subtile)
 			for subtile in needsToBeTeleported:
 				subtile.updatePos(nextInstance.pos.x, nextInstance.pos.y)
+				postMovementUpdate(subtile, rulesStatic, rulesDynamic)
 				justTeleported.append(subtile)
-		if (ifRuleActive_cached(tile.tileName, "is", "fall", appliableStaticRulesCache[tile])):
-			yeet_tile(tile, 0, 1, appliableStaticRulesCache)
+		if (ifRuleActive_cached(tile.tileName, "is", "fall", rs, rd)):
+			yeet_tile(tile, 0, 1, rulesStatic, rulesDynamic)
 	# todo (NOUN IS NOT NOUN) or (NOUN IS EMPTY)
 	for tileNum in range(0, tilesTrimmed.size()):
 		if (tileNum > tilesTrimmed.size() - 1):
 			break
-		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "done", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
+		rs = rulesStatic[tilesTrimmed[tileNum].tileName]
+		rd = rulesDynamic[tilesTrimmed[tileNum]]
+		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "done", rs, rd)):
 			if (destroyTile(tilesTrimmed[tileNum], true)):
 				tileNum -= 1
 			continue
 	for tileNum in range(0, tilesTrimmed.size()):
 		if (tileNum > tilesTrimmed.size() - 1):
 			break
-		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "weak", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
-			for subTileNum in range(0, tiles.size()):
-				if (subTileNum > tiles.size() - 1):
-					break
-				if (tiles[subTileNum] != tilesTrimmed[tileNum] && tiles[subTileNum].pos == tilesTrimmed[tileNum].pos):
-					if (destroyTile(tilesTrimmed[tileNum])):
-						tileNum -= 1
-					break
-	for tileNum in range(0, tilesTrimmed.size()):
-		if (tileNum > tilesTrimmed.size() - 1):
-			break
-		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "sink", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
+		rs = rulesStatic[tilesTrimmed[tileNum].tileName]
+		rd = rulesDynamic[tilesTrimmed[tileNum]]
+		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "sink", rs, rd)):
 			for subTileNum in range(0, tiles.size()):
 				if (subTileNum > tiles.size() - 1):
 					break
@@ -660,31 +641,37 @@ func updateWorld() -> void:
 	for tileNum in range(0, tilesTrimmed.size()):
 		if (tileNum > tilesTrimmed.size() - 1):
 			break
-		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "hot", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
+		rs = rulesStatic[tilesTrimmed[tileNum].tileName]
+		rd = rulesDynamic[tilesTrimmed[tileNum]]
+		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "hot", rs, rd)):
 			for subTileNum in range(0, tiles.size()):
 				if (subTileNum > tiles.size() - 1):
 					break
-				if (tiles[subTileNum].pos == tilesTrimmed[tileNum].pos && ifRuleActive_cached(tiles[subTileNum].tileName, "is", "melt", appliableStaticRulesCache[tiles[subTileNum]])):
+				if (tiles[subTileNum].pos == tilesTrimmed[tileNum].pos && ifRuleActive_cached(tiles[subTileNum].tileName, "is", "melt", rulesStatic[tiles[subTileNum].tileName], rulesDynamic[tiles[subTileNum]])):
 					if (destroyTile(tiles[subTileNum])):
 						subTileNum -= 1
 	for tileNum in range(0, tilesTrimmed.size()):
 		if (tileNum > tilesTrimmed.size() - 1):
 			break
-		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "defeat", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
+		rs = rulesStatic[tilesTrimmed[tileNum].tileName]
+		rd = rulesDynamic[tilesTrimmed[tileNum]]
+		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "defeat", rs, rd)):
 			for subTileNum in range(0, tiles.size()):
 				if (subTileNum > tiles.size() - 1):
 					break
-				if (tiles[subTileNum].pos == tilesTrimmed[tileNum].pos && ifRuleActive_cached(tiles[subTileNum].tileName, "is", "you", appliableStaticRulesCache[tiles[subTileNum]])):
+				if (tiles[subTileNum].pos == tilesTrimmed[tileNum].pos && ifRuleActive_cached(tiles[subTileNum].tileName, "is", "you", rulesStatic[tiles[subTileNum].tileName], rulesDynamic[tiles[subTileNum]])):
 					if (destroyTile(tiles[subTileNum])):
 						subTileNum -= 1
 	for tileNum in range(0, tilesTrimmed.size()):
 		if (tileNum > tilesTrimmed.size() - 1):
 			break
-		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "shut", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
+		rs = rulesStatic[tilesTrimmed[tileNum].tileName]
+		rd = rulesDynamic[tilesTrimmed[tileNum]]
+		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "shut", rs, rd)):
 			for subTileNum in range(0, tiles.size()):
 				if (subTileNum > tiles.size() - 1):
 					break
-				if (ifRuleActive_cached(tiles[subTileNum].tileName, "is", "open", appliableStaticRulesCache[tiles[subTileNum]])):
+				if (ifRuleActive_cached(tiles[subTileNum].tileName, "is", "open", rs, rd)):
 					if (destroyTile(tiles[subTileNum])):
 						subTileNum -= 1
 					if (destroyTile(tilesTrimmed[tileNum])):
@@ -696,53 +683,48 @@ func updateWorld() -> void:
 			break
 		if (justSpawned.has(tilesTrimmed[tileNum])):
 			continue
-		if (ifOperatorUsed_cached(tilesTrimmed[tileNum].tileName, "is", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
-			if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "win", appliableStaticRulesCache[tilesTrimmed[tileNum]]) || ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "end", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
-				for subtile in tiles:
-					if (subtile.pos == tilesTrimmed[tileNum].pos && ifRuleActive_cached(subtile.tileName, "is", "you", appliableStaticRulesCache[subtile])):
-						controlsActive = false
-			if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "bonus", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
-				for subtile in tiles:
-					if (subtile.pos == tilesTrimmed[tileNum].pos && ifRuleActive_cached(subtile.tileName, "is", "you", appliableStaticRulesCache[subtile])):
-						if (destroyTile(tilesTrimmed[tileNum])):
-							tileNum -= 1
-						break
-			if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "more", appliableStaticRulesCache[tilesTrimmed[tileNum]])):
-				var upFree = tilesTrimmed[tileNum].pos.y > 0
-				var downFree = tilesTrimmed[tileNum].pos.y < worldHeight - 1
-				var leftFree = tilesTrimmed[tileNum].pos.x > 0
-				var rightFree = tilesTrimmed[tileNum].pos.x < worldWidth - 1
-				var counter = 0
-				for subtile in tiles:
-					if (subtile.tileId == tilesTrimmed[tileNum].tileId || is_tile_solid(subtile, appliableStaticRulesCache)):
-						if (upFree && subtile.pos == tilesTrimmed[tileNum].pos + Vector2.UP):
-							upFree = false
-							counter += 1
-							if (counter >= 4):
-								break
-						elif (downFree && subtile.pos == tilesTrimmed[tileNum].pos + Vector2.DOWN):
-							downFree = false
-							counter += 1
-							if (counter >= 4):
-								break
-						elif (leftFree && subtile.pos == tilesTrimmed[tileNum].pos + Vector2.LEFT):
-							leftFree = false
-							counter += 1
-							if (counter >= 4):
-								break
-						elif (rightFree && subtile.pos == tilesTrimmed[tileNum].pos + Vector2.RIGHT):
-							rightFree = false
-							counter += 1
-							if (counter >= 4):
-								break
-				if (upFree):
-					justSpawned.append(spawnTile(tilesTrimmed[tileNum].pos.x, tilesTrimmed[tileNum].pos.y - 1, tilesTrimmed[tileNum].direction, tilesTrimmed[tileNum].tileId))
-				if (downFree):
-					justSpawned.append(spawnTile(tilesTrimmed[tileNum].pos.x, tilesTrimmed[tileNum].pos.y + 1, tilesTrimmed[tileNum].direction, tilesTrimmed[tileNum].tileId))
-				if (leftFree):
-					justSpawned.append(spawnTile(tilesTrimmed[tileNum].pos.x - 1, tilesTrimmed[tileNum].pos.y, tilesTrimmed[tileNum].direction, tilesTrimmed[tileNum].tileId))
-				if (rightFree):
-					justSpawned.append(spawnTile(tilesTrimmed[tileNum].pos.x + 1, tilesTrimmed[tileNum].pos.y, tilesTrimmed[tileNum].direction, tilesTrimmed[tileNum].tileId))
+		rs = rulesStatic[tilesTrimmed[tileNum].tileName]
+		rd = rulesDynamic[tilesTrimmed[tileNum]]
+		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "win", rs, rd) || ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "end", rs, rd)):
+			for subtile in tiles:
+				if (subtile.pos == tilesTrimmed[tileNum].pos && ifRuleActive_cached(subtile.tileName, "is", "you", rulesStatic[subtile.tileName], rulesDynamic[subtile])):
+					controlsActive = false
+		if (ifRuleActive_cached(tilesTrimmed[tileNum].tileName, "is", "more", rs, rd)):
+			var upFree = tilesTrimmed[tileNum].pos.y > 0
+			var downFree = tilesTrimmed[tileNum].pos.y < worldHeight - 1
+			var leftFree = tilesTrimmed[tileNum].pos.x > 0
+			var rightFree = tilesTrimmed[tileNum].pos.x < worldWidth - 1
+			var counter = 0
+			for subtile in tiles:
+				if (subtile.tileId == tilesTrimmed[tileNum].tileId || is_tile_solid(subtile, rs, rd)):
+					if (upFree && subtile.pos == tilesTrimmed[tileNum].pos + Vector2.UP):
+						upFree = false
+						counter += 1
+						if (counter >= 4):
+							break
+					elif (downFree && subtile.pos == tilesTrimmed[tileNum].pos + Vector2.DOWN):
+						downFree = false
+						counter += 1
+						if (counter >= 4):
+							break
+					elif (leftFree && subtile.pos == tilesTrimmed[tileNum].pos + Vector2.LEFT):
+						leftFree = false
+						counter += 1
+						if (counter >= 4):
+							break
+					elif (rightFree && subtile.pos == tilesTrimmed[tileNum].pos + Vector2.RIGHT):
+						rightFree = false
+						counter += 1
+						if (counter >= 4):
+							break
+			if (upFree):
+				justSpawned.append(spawnTile(tilesTrimmed[tileNum].pos.x, tilesTrimmed[tileNum].pos.y - 1, tilesTrimmed[tileNum].direction, tilesTrimmed[tileNum].tileId))
+			if (downFree):
+				justSpawned.append(spawnTile(tilesTrimmed[tileNum].pos.x, tilesTrimmed[tileNum].pos.y + 1, tilesTrimmed[tileNum].direction, tilesTrimmed[tileNum].tileId))
+			if (leftFree):
+				justSpawned.append(spawnTile(tilesTrimmed[tileNum].pos.x - 1, tilesTrimmed[tileNum].pos.y, tilesTrimmed[tileNum].direction, tilesTrimmed[tileNum].tileId))
+			if (rightFree):
+				justSpawned.append(spawnTile(tilesTrimmed[tileNum].pos.x + 1, tilesTrimmed[tileNum].pos.y, tilesTrimmed[tileNum].direction, tilesTrimmed[tileNum].tileId))
 	unappliedMovement = null
 	if (unappliedRules):
 		unappliedRules = false
@@ -810,14 +792,14 @@ func applyAutoTile(tile) -> void:
 		return
 	tile.autoTileValue = 0
 
-func yeet_tile(tile, delta_x, delta_y, rulesCache) -> void:
+func yeet_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic) -> void:
 	while (true):
-		if (!push_tile(tile, delta_x, delta_y, rulesCache)):
+		if (!push_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic)):
 			return;
 
 # todo add open/shut here
-func push_tile(tile, delta_x, delta_y, rulesCache, moveMode = false, moveModeRule = "move") -> bool:
-	if (ifRuleActive_cached(tile.tileName, "is", "fall", rulesCache[tile]) && delta_y < 0):
+func push_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic, moveMode = false, moveModeRule = "move") -> bool:
+	if (ifRuleActive_cached(tile.tileName, "is", "fall", rulesStatic[tile.tileName], rulesDynamic[tile]) && delta_y < 0):
 		return false
 	var newX = tile.pos.x + delta_x
 	var newY = tile.pos.y + delta_y
@@ -825,50 +807,61 @@ func push_tile(tile, delta_x, delta_y, rulesCache, moveMode = false, moveModeRul
 	var oppositeY = tile.pos.y - delta_y
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
 		return false
-	var swapMode = ifRuleActive_cached(tile.tileName, "is", "swap", rulesCache[tile])
+	var swapMode = ifRuleActive_cached(tile.tileName, "is", "swap", rulesStatic[tile.tileName], rulesDynamic[tile])
+	var weakMode = ifRuleActive_cached(tile.tileName, "is", "weak", rulesStatic[tile.tileName], rulesDynamic[tile])
 	var pushableTiles = []
 	var pullableTiles = []
 	for pushedTile in tiles:
 		if (pushedTile.pos.x == newX && pushedTile.pos.y == newY):
-			if (is_tile_solid(pushedTile, rulesCache)):
-				if (swapMode || ifRuleActive_cached(pushedTile.tileName, "is", "swap", rulesCache[pushedTile])):
-					if (!can_be_pushed(pushedTile, -delta_x, -delta_y, tile, rulesCache, moveMode, moveModeRule)):
-						return false
-				else:
-					if (!can_be_pushed(pushedTile, delta_x, delta_y, tile, rulesCache, moveMode, moveModeRule)):
-						return false
+			if (is_tile_solid(pushedTile, rulesStatic, rulesDynamic)):
+				if (!weakMode || swapMode):
+					if (swapMode || ifRuleActive_cached(pushedTile.tileName, "is", "swap", rulesStatic[pushedTile.tileName], rulesDynamic[pushedTile])):
+						if (!can_be_pushed(pushedTile, -delta_x, -delta_y, tile, rulesStatic, rulesDynamic, moveMode, moveModeRule)):
+							return false
+					else:
+						if (!can_be_pushed(pushedTile, delta_x, delta_y, tile, rulesStatic, rulesDynamic, moveMode, moveModeRule)):
+							return false
 				pushableTiles.append(pushedTile)
 				if (swapMode):
 					break
 		elif (pushedTile.pos.x == oppositeX && pushedTile.pos.y == oppositeY):
-			if (is_tile_solid(pushedTile, rulesCache)):
-				if (!can_be_pulled(pushedTile, delta_x, delta_y, rulesCache)):
+			if (is_tile_solid(pushedTile, rulesStatic, rulesDynamic)):
+				if (!can_be_pulled(pushedTile, delta_x, delta_y, rulesStatic, rulesDynamic)):
 					continue
 				pullableTiles.append(pushedTile)
-	for pushedTile in pushableTiles:
-		if (!moveMode || !ifRuleActive_cached(pushedTile.tileName, "is", moveModeRule, rulesCache[pushedTile])):
-			if (swapMode || ifRuleActive_cached(pushedTile.tileName, "is", "swap", rulesCache[pushedTile])):
-				pull_tile(pushedTile, -delta_x, -delta_y, rulesCache)
-			else:
-				push_tile(pushedTile, delta_x, delta_y, rulesCache, moveMode)
 	for pulledTile in pullableTiles:
-		pull_tile(pulledTile, delta_x, delta_y, rulesCache)
+		pull_tile(pulledTile, delta_x, delta_y, rulesStatic, rulesDynamic)
+	if (weakMode && !swapMode && pushableTiles.size() > 0):
+		if (destroyTile(tile)):
+			return true
+	for pushedTile in pushableTiles:
+		if (!moveMode || !ifRuleActive_cached(pushedTile.tileName, "is", moveModeRule, rulesStatic[pushedTile.tileName], rulesDynamic[pushedTile])):
+			if (swapMode || ifRuleActive_cached(pushedTile.tileName, "is", "swap", rulesStatic[pushedTile.tileName], rulesDynamic[pushedTile])):
+				pull_tile(pushedTile, -delta_x, -delta_y, rulesStatic, rulesDynamic)
+			else:
+				push_tile(pushedTile, delta_x, delta_y, rulesStatic, rulesDynamic, moveMode)
 	tile.updatePos(newX, newY)
 	if (tile.tileType != 0):
 		unappliedRules = true
 	if (tile.tilingMode == 1):
 		unappliedAutoTile = true
-	if (ifOperatorUsed_cached(tile.tileName, "make", rulesCache[tile])):
-		for rule in rulesCache[tile]:
+	postMovementUpdate(tile, rulesStatic, rulesDynamic)
+	return true
+
+func postMovementUpdate(tile, rulesStatic, rulesDynamic) -> void:
+	if (ifOperatorUsed_cached(tile.tileName, "make", rulesStatic[tile.tileName], rulesDynamic[tile])):
+		for rule in rulesStatic[tile.tileName] + rulesDynamic[tile]:
 			if (rule.has("make")):
 				for tileName in rule["make"].keys():
 					if "not " in tileName:
 						push_error("making inversed tiles is not supported")
 					else:
 						var result = spawnTileByName(tile.oldPos.x, tile.oldPos.y, tile.direction, tileName)
-						rulesCache[result] = getAppliableRules(result.tileName, worldRulesStatic, worldRulesDynamic, result)
-	if (ifOperatorUsed_cached(tile.tileName, "eat", rulesCache[tile])):
-		for rule in rulesCache[tile]:
+						if (!rulesStatic.has(result.tileName)):
+							rulesStatic[result.tileName] = getAppliableRulesStatic(result.tileName, worldRulesStatic, result)
+						rulesDynamic[result] = getAppliableRulesDynamic(result.tileName, worldRulesDynamic, result)
+	if (ifOperatorUsed_cached(tile.tileName, "eat", rulesStatic[tile.tileName], rulesDynamic[tile])):
+		for rule in rulesStatic[tile.tileName] + rulesDynamic[tile]:
 			if (rule.has("eat")):
 				for subTileNum in range(0, tiles.size()):
 					if (subTileNum > tiles.size() - 1):
@@ -887,9 +880,8 @@ func push_tile(tile, delta_x, delta_y, rulesCache, moveMode = false, moveModeRul
 								if (destroyTile(tiles[subTileNum])):
 									subTileNum -= 1
 								continue
-	return true
 
-func pull_tile(tile, delta_x, delta_y, rulesCache) -> bool:
+func pull_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic) -> bool:
 	var newX = tile.pos.x + delta_x
 	var newY = tile.pos.y + delta_y
 	var oppositeX = tile.pos.x - delta_x
@@ -899,12 +891,12 @@ func pull_tile(tile, delta_x, delta_y, rulesCache) -> bool:
 	var pullableTiles = []
 	for pushedTile in tiles:
 		if (pushedTile.pos.x == oppositeX && pushedTile.pos.y == oppositeY):
-			if (is_tile_solid(pushedTile, rulesCache)):
-				if (!can_be_pulled(pushedTile, delta_x, delta_y, rulesCache)):
+			if (is_tile_solid(pushedTile, rulesStatic, rulesDynamic)):
+				if (!can_be_pulled(pushedTile, delta_x, delta_y, rulesStatic, rulesDynamic)):
 					continue
 				pullableTiles.append(pushedTile)
 	for pulledTile in pullableTiles:
-		pull_tile(pulledTile, delta_x, delta_y, rulesCache)
+		pull_tile(pulledTile, delta_x, delta_y, rulesStatic, rulesDynamic)
 	tile.updatePos(newX, newY)
 	if (tile.tilingMode == 1):
 		unappliedAutoTile = true
@@ -912,46 +904,47 @@ func pull_tile(tile, delta_x, delta_y, rulesCache) -> bool:
 		unappliedRules = true
 	if (tile.tilingMode == 1):
 		unappliedAutoTile = true
+	postMovementUpdate(tile, rulesStatic, rulesDynamic)
 	return true
 
-func can_be_pushed(tile, delta_x, delta_y, referenceTile, rulesCache, moveMode = false, moveModeRule = "move") -> bool:
+func can_be_pushed(tile, delta_x, delta_y, referenceTile, rulesStatic, rulesDynamic, moveMode = false, moveModeRule = "move") -> bool:
 	var newX = tile.pos.x + delta_x
 	var newY = tile.pos.y + delta_y
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
 		return false
-	if (!moveMode || !ifRuleActive_cached(tile.tileName, "is", moveModeRule, rulesCache[tile])):
-		if (ifRuleActive_cached(tile.tileName, "is", "stop", rulesCache[tile])):
+	if (!moveMode || !ifRuleActive_cached(tile.tileName, "is", moveModeRule, rulesStatic[tile.tileName], rulesDynamic[tile])):
+		if (ifRuleActive_cached(tile.tileName, "is", "stop", rulesStatic[tile.tileName], rulesDynamic[tile])):
 			return false
-		if (tile.tileType == 0 && !ifRuleActive_cached(tile.tileName, "is", "push", rulesCache[tile])):
+		if (tile.tileType == 0 && !ifRuleActive_cached(tile.tileName, "is", "push", rulesStatic[tile.tileName], rulesDynamic[tile])):
 			return false
-	var swapMode = ifRuleActive_cached(tile.tileName, "is", "swap", rulesCache[tile])
+	var swapMode = ifRuleActive_cached(tile.tileName, "is", "swap", rulesStatic[tile.tileName], rulesDynamic[tile])
 	for pushedTile in tiles:
 		if (pushedTile.pos.x == newX && pushedTile.pos.y == newY):
-			if (is_tile_solid(pushedTile, rulesCache)):
+			if (is_tile_solid(pushedTile, rulesStatic, rulesDynamic)):
 				if (!swapMode):
-					if (!can_be_pushed(pushedTile, delta_x, delta_y, tile, rulesCache, moveMode, moveModeRule)):
+					if (!can_be_pushed(pushedTile, delta_x, delta_y, tile, rulesStatic, rulesDynamic, moveMode, moveModeRule)):
 						return false
 	return true
 
-func can_be_pulled(tile, delta_x, delta_y, rulesCache) -> bool:
+func can_be_pulled(tile, delta_x, delta_y, rulesStatic, rulesDynamic) -> bool:
 	var newX = tile.pos.x + delta_x
 	var newY = tile.pos.y + delta_y
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
 		return false
-	if (ifRuleActive_cached(tile.tileName, "is", "stop", rulesCache[tile])):
+	if (ifRuleActive_cached(tile.tileName, "is", "stop", rulesStatic[tile.tileName], rulesDynamic[tile])):
 		return false
-	if (!ifRuleActive_cached(tile.tileName, "is", "pull", rulesCache[tile])):
+	if (!ifRuleActive_cached(tile.tileName, "is", "pull", rulesStatic[tile.tileName], rulesDynamic[tile])):
 		return false
 	return true
 
-func is_tile_solid(tile, rulesCache) -> bool:
+func is_tile_solid(tile, rulesStatic, rulesDynamic) -> bool:
 	if (tile.tileType != 0):
 		return true
-	if (ifRuleActive_cached(tile.tileName, "is", "push", rulesCache[tile])):
+	if (ifRuleActive_cached(tile.tileName, "is", "push", rulesStatic[tile.tileName], rulesDynamic[tile])):
 		return true
-	if (ifRuleActive_cached(tile.tileName, "is", "pull", rulesCache[tile])):
+	if (ifRuleActive_cached(tile.tileName, "is", "pull", rulesStatic[tile.tileName], rulesDynamic[tile])):
 		return true
-	if (ifRuleActive_cached(tile.tileName, "is", "stop", rulesCache[tile])):
+	if (ifRuleActive_cached(tile.tileName, "is", "stop", rulesStatic[tile.tileName], rulesDynamic[tile])):
 		return true
 	return false
 
@@ -970,12 +963,15 @@ func checkTheRules() -> void:
 			checkTileRules(tile, worldRulesOld, worldRulesDynOld, true, usedVertically)
 		if (!usedHorizontally.has(tile)):
 			checkTileRules(tile, worldRulesOld, worldRulesDynOld, false, usedHorizontally)
+	rulesStatic = {}
 	for tile in tiles:
-		var rulesCache = getAppliableRules(tile.tileName, worldRulesStatic, worldRulesDynamic, tile)
-		if (ifOperatorUsed_cached(tile.tileName, "is", rulesCache)):
-			tile.isFloating = ifRuleActive_cached(tile.tileName, "is", "float", rulesCache)
-			tile.isSleeping = ifRuleActive_cached(tile.tileName, "is", "sleep", rulesCache)
-			tile.visible = !ifRuleActive_cached(tile.tileName, "is", "hide", rulesCache)
+		if (!rulesStatic.has(tile.tileName)):
+			rulesStatic[tile.tileName] = getAppliableRulesStatic(tile.tileName, worldRulesStatic, tile)
+		var rulesCacheDynamic = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, tile)
+		if (ifOperatorUsed_cached(tile.tileName, "is", rulesStatic[tile.tileName], rulesCacheDynamic)):
+			tile.isFloating = ifRuleActive_cached(tile.tileName, "is", "float", rulesStatic[tile.tileName], rulesCacheDynamic)
+			tile.isSleeping = ifRuleActive_cached(tile.tileName, "is", "sleep", rulesStatic[tile.tileName], rulesCacheDynamic)
+			tile.visible = !ifRuleActive_cached(tile.tileName, "is", "hide", rulesStatic[tile.tileName], rulesCacheDynamic)
 
 #finalRule = [
 #	[
@@ -1354,8 +1350,8 @@ func applyRuleInstantly(affectedTile, operator, action) -> bool:
 func ifRuleActive(tile_name, operator, action, tile) -> bool:
 	return ifRuleActiveRetro(tile_name, operator, action, worldRulesStatic, worldRulesDynamic, tile)
 
-func ifRuleActiveRetro(tile_name, operator, action, worldRules, worldRulesDyn, tile) -> bool:	
-	return ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, getAppliableRules(tile_name, worldRules, worldRulesDyn, tile))
+func ifRuleActiveRetro(tile_name, operator, action, worldRules, worldRulesDyn, tile) -> bool:
+	return ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, getAppliableRulesStatic(tile_name, worldRules, tile), getAppliableRulesDynamic(tile_name, worldRulesDyn, tile))
 
 # worldRulesDynamic have:
 # - on
@@ -1365,8 +1361,7 @@ func ifRuleActiveRetro(tile_name, operator, action, worldRules, worldRulesDyn, t
 
 # ["lonely not baba", "near", "not lonely wall", "is", "you"]
 
-# optimize
-func getAppliableRules(tile_name, worldRules, worldRulesDyn, tile) -> Array:
+func getAppliableRulesStatic(tile_name, worldRules, tile) -> Array:
 	var appliableRules = []
 	
 	if ("text_" in tile_name):
@@ -1380,6 +1375,14 @@ func getAppliableRules(tile_name, worldRules, worldRulesDyn, tile) -> Array:
 		else:
 			if (ruleNoun == tile_name || ruleNoun == "all" || ruleNoun == "level"):
 				appliableRules.append(worldRules[ruleNoun])
+	
+	return appliableRules
+
+func getAppliableRulesDynamic(tile_name, worldRulesDyn, tile) -> Array:
+	var appliableRules = []
+	
+	if ("text_" in tile_name):
+		tile_name = "text"
 	
 	for rule in worldRulesDyn:
 		var affectedTile;
@@ -1513,45 +1516,63 @@ func isTileLonely(tile, lonelyType) -> bool:
 	return true
 
 func ifOperatorUsed(tile_name, operator, tile) -> String:
-	return ifOperatorUsed_cached(tile_name, operator, getAppliableRules(tile_name, worldRulesStatic, worldRulesDynamic, tile))
+	return ifOperatorUsed_cached(tile_name, operator, getAppliableRulesStatic(tile_name, worldRulesStatic, tile), getAppliableRulesDynamic(tile_name, worldRulesDynamic, tile))
 
 func getRuleStackValue(tile_name, operator, action, tile) -> int:
-	return getRuleStackValue_cached(tile_name, operator, action, getAppliableRules(tile_name, worldRulesStatic, worldRulesDynamic, tile))
+	return getRuleStackValue_cached(tile_name, operator, action, getAppliableRulesStatic(tile_name, worldRulesStatic, tile), getAppliableRulesDynamic(tile_name, worldRulesDynamic, tile))
 
-func ifOperatorUsed_cached(tile_name, operator, appliableStaticRules) -> String:
+func ifOperatorUsed_cached(tile_name, operator, appliableStaticRules, appliableDynamicRules) -> String:
 	
 	# todo exclude if not is used
 	
 	for rule in appliableStaticRules:
 		if (rule.has(operator)):
 			return rule[operator][rule[operator].keys()[0]]
+
+	for rule in appliableDynamicRules:
+		if (rule.has(operator)):
+			return rule[operator][rule[operator].keys()[0]]
 	
 	return ""
 
-func ifRuleActive_cached(tile_name, operator, action, appliableStaticRules) -> bool:
-	return ifRuleActiveRetro_cached(tile_name, operator, action, worldRulesStatic, worldRulesDynamic, appliableStaticRules)
+func ifRuleActive_cached(tile_name, operator, action, appliableStaticRules, appliableDynamicRules) -> bool:
+	return ifRuleActiveRetro_cached(tile_name, operator, action, worldRulesStatic, worldRulesDynamic, appliableStaticRules, appliableDynamicRules)
 
-func ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, appliableStaticRules) -> bool:	
+func ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, appliableStaticRules, appliableDynamicRules) -> bool:	
 	if !("not " in action):
 		for rule in appliableStaticRules:
+			if (rule.has(operator) && rule[operator].has("not " + action)):
+				return false
+		for rule in appliableDynamicRules:
 			if (rule.has(operator) && rule[operator].has("not " + action)):
 				return false
 		
 	for rule in appliableStaticRules:
 		if (rule.has(operator) && rule[operator].has(action)):
 			return true
+			
+	for rule in appliableDynamicRules:
+		if (rule.has(operator) && rule[operator].has(action)):
+			return true
 	
 	return false
 
-func getRuleStackValue_cached(tile_name, operator, action, appliableStaticRules) -> int:
+func getRuleStackValue_cached(tile_name, operator, action, appliableStaticRules, appliableDynamicRules) -> int:
 	var value = 0
 
 	if !("not " in action):
 		for rule in appliableStaticRules:
 			if (rule.has(operator) && rule[operator].has("not " + action)):
 				return 0
+		for rule in appliableDynamicRules:
+			if (rule.has(operator) && rule[operator].has("not " + action)):
+				return 0
 
 	for rule in appliableStaticRules:
+		if (rule.has(operator) && rule[operator].has(action)):
+			value += rule[operator][action]
+
+	for rule in appliableDynamicRules:
 		if (rule.has(operator) && rule[operator].has(action)):
 			value += rule[operator][action]
 	

@@ -17,10 +17,13 @@ var pos = Vector2(0, 0)
 
 var main;
 
+var needsToMoved = false
+
 func updatePos(x, y) -> void:
 	var newPos = Vector2(x, y)
 	oldPos = pos
 	pos = newPos
+	needsToMoved = true
 	if ((tilingMode == 2 || tilingMode == 3) != (oldPos == pos) && main.worldLerpTime != 1):
 		var oldDir = direction
 		direction = 0 if (pos.x == oldPos.x + 1) else 2 if (pos.x == oldPos.x - 1) else 3 if (pos.y == oldPos.y + 1) else 1 if (pos.y == oldPos.y - 1) else -1
@@ -57,5 +60,9 @@ func toggleCross(enable) -> void:
 	pass
 	
 func _process(delta):
-	position = position.linear_interpolate(pos * 24, delta * 10)
-	offset.y = (-6 + sin(main.curTime / 200.0) * 3) if isFloating else 0
+	if (needsToMoved || isFloating):
+		position = position.linear_interpolate(pos * 24, delta * 10)
+		offset.y = (-6 + sin(main.curTime / 200.0) * 3) if isFloating else 0
+		if (position.distance_to(pos * 24) < 0.01):
+			position = pos * 24
+			needsToMoved = false
