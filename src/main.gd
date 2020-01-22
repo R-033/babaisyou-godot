@@ -14,8 +14,12 @@ extends Node
 var loaded
 
 var tiles = []
+var solidTiles = []
+var tilingMode3Tiles = []
+
 var worldRulesStatic = {}
 var worldRulesDynamic = []
+var dynamicRuleApplyabilityCache = {}
 
 var rulesStatic = {}
 
@@ -264,9 +268,9 @@ func _ready():
 	
 	loadPalette("default.png")
 	
-	test_pong()
+	#test_pong()
 	
-	#test_syntax()
+	test_syntax()
 	
 	#test_paint()
 	
@@ -434,8 +438,15 @@ func changeTileType(tile, name, forceLightUp = false) -> void:
 	
 	if (tile.tilingMode != 1):
 		tile.autoTileValue = 0
+		if (tile.tilingMode == 3):
+			if (!tilingMode3Tiles.has(tile)):
+				tilingMode3Tiles.append(tile)
+		elif (tilingMode3Tiles.has(tile)):
+			tilingMode3Tiles.erase(tile)
 	else:
 		unappliedAutoTile = true
+		if (tilingMode3Tiles.has(tile)):
+			tilingMode3Tiles.erase(tile)
 	
 	if (!loadedSprites.has(name)):
 		loadedSprites[name] = []
@@ -476,6 +487,8 @@ func destroyTile(tile, forced = false) -> bool:
 		unappliedRules = true
 	if (tile.tilingMode == 1):
 		unappliedAutoTile = true
+	elif (tile.tilingMode == 3):
+		tilingMode3Tiles.earse(tile)
 	tiles.erase(tile)
 	remove_child(tile)
 	return true
@@ -507,33 +520,41 @@ func moveDirFix(tile, forward, rulesStatic, rulesDynamic) -> void:
 				subTile.updateSpriteAnim()
 				moveDirFix(subTile, forward, rulesStatic, rulesDynamic)
 
+var justTeleported = []
+var justShifted = []
+var justSpawned = []
+var rulesDynamic = {}
+var tilesTrimmed = []
+var rs
+var rd
+
 func updateWorld() -> void:
-	var justTeleported = []
-	var justShifted = []
-	var justSpawned = []
-	var rulesDynamic = {}
-	tiles.sort_custom(self, "tileSorter")
-	var tilesTrimmed = []
+	justTeleported = []
+	justShifted = []
+	justSpawned = []
+	rulesDynamic = {}
+	tilesTrimmed = []
+	solidTiles = []
+	for tile in tilingMode3Tiles:
+		tile.updateWalkFrame()
+		tile.updateSpriteAnim()
 	for tile in tiles:
-		if (tile.tilingMode == 3):
-			tile.updateWalkFrame()
-			tile.updateSpriteAnim()
-		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, tile)
+		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, dynamicRuleApplyabilityCache, tile)
 		if (rulesStatic[tile.tileName].size() > 0 || rulesDynamic[tile].size() > 0):
 			tilesTrimmed.append(tile)
 			tile.isFloating = ifRuleActive_cached(tile.tileName, "is", "float", rulesStatic[tile.tileName], rulesDynamic[tile])
 			tile.isSleeping = ifRuleActive_cached(tile.tileName, "is", "sleep", rulesStatic[tile.tileName], rulesDynamic[tile])
 			tile.visible = !ifRuleActive_cached(tile.tileName, "is", "hide", rulesStatic[tile.tileName], rulesDynamic[tile])
+			if (is_tile_solid(tile, rulesStatic, rulesDynamic)):
+				solidTiles.append(tile)
 		else:
 			tile.isFloating = false
 			tile.isSleeping = false
 			tile.visible = true
-	var rs
-	var rd
 	for tile in tilesTrimmed:
 		rs = rulesStatic[tile.tileName]
 		rd = rulesDynamic[tile]
-		if (unappliedMovement != null && ifRuleActive_cached(tile.tileName, "is", "you", rs, rd) && !tile.isSleeping && unappliedMovement != Vector2.ZERO):
+		if (ifRuleActive_cached(tile.tileName, "is", "you", rs, rd) && !tile.isSleeping && unappliedMovement != Vector2.ZERO):
 			if (ifRuleActive_cached(tile.tileName, "is", "up", rs, rd)):
 				push_tile(tile, 0, -1, rulesStatic, rulesDynamic, true, "you")
 			elif (ifRuleActive_cached(tile.tileName, "is", "down", rs, rd)):
@@ -549,7 +570,7 @@ func updateWorld() -> void:
 		checkTheRules()
 	tilesTrimmed = []
 	for tile in tiles:
-		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, tile)
+		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, dynamicRuleApplyabilityCache, tile)
 		if (rulesStatic[tile.tileName].size() > 0 || rulesDynamic[tile].size() > 0):
 			tilesTrimmed.append(tile)
 	for tile in tilesTrimmed:
@@ -579,7 +600,7 @@ func updateWorld() -> void:
 		checkTheRules()
 	tilesTrimmed = []
 	for tile in tiles:
-		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, tile)
+		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, dynamicRuleApplyabilityCache, tile)
 		if (rulesStatic[tile.tileName].size() > 0 || rulesDynamic[tile].size() > 0):
 			tilesTrimmed.append(tile)
 		else:
@@ -811,24 +832,22 @@ func push_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic, moveMode = fal
 	var weakMode = ifRuleActive_cached(tile.tileName, "is", "weak", rulesStatic[tile.tileName], rulesDynamic[tile])
 	var pushableTiles = []
 	var pullableTiles = []
-	for pushedTile in tiles:
+	for pushedTile in solidTiles:
 		if (pushedTile.pos.x == newX && pushedTile.pos.y == newY):
-			if (is_tile_solid(pushedTile, rulesStatic, rulesDynamic)):
-				if (!weakMode || swapMode):
-					if (swapMode || ifRuleActive_cached(pushedTile.tileName, "is", "swap", rulesStatic[pushedTile.tileName], rulesDynamic[pushedTile])):
-						if (!can_be_pushed(pushedTile, -delta_x, -delta_y, tile, rulesStatic, rulesDynamic, moveMode, moveModeRule)):
-							return false
-					else:
-						if (!can_be_pushed(pushedTile, delta_x, delta_y, tile, rulesStatic, rulesDynamic, moveMode, moveModeRule)):
-							return false
-				pushableTiles.append(pushedTile)
-				if (swapMode):
-					break
+			if (!weakMode || swapMode):
+				if (swapMode || ifRuleActive_cached(pushedTile.tileName, "is", "swap", rulesStatic[pushedTile.tileName], rulesDynamic[pushedTile])):
+					if (!can_be_pushed(pushedTile, -delta_x, -delta_y, tile, rulesStatic, rulesDynamic, moveMode, moveModeRule)):
+						return false
+				else:
+					if (!can_be_pushed(pushedTile, delta_x, delta_y, tile, rulesStatic, rulesDynamic, moveMode, moveModeRule)):
+						return false
+			pushableTiles.append(pushedTile)
+			if (swapMode):
+				break
 		elif (pushedTile.pos.x == oppositeX && pushedTile.pos.y == oppositeY):
-			if (is_tile_solid(pushedTile, rulesStatic, rulesDynamic)):
-				if (!can_be_pulled(pushedTile, delta_x, delta_y, rulesStatic, rulesDynamic)):
-					continue
-				pullableTiles.append(pushedTile)
+			if (!can_be_pulled(pushedTile, delta_x, delta_y, rulesStatic, rulesDynamic)):
+				continue
+			pullableTiles.append(pushedTile)
 	for pulledTile in pullableTiles:
 		pull_tile(pulledTile, delta_x, delta_y, rulesStatic, rulesDynamic)
 	if (weakMode && !swapMode && pushableTiles.size() > 0):
@@ -859,7 +878,7 @@ func postMovementUpdate(tile, rulesStatic, rulesDynamic) -> void:
 						var result = spawnTileByName(tile.oldPos.x, tile.oldPos.y, tile.direction, tileName)
 						if (!rulesStatic.has(result.tileName)):
 							rulesStatic[result.tileName] = getAppliableRulesStatic(result.tileName, worldRulesStatic, result)
-						rulesDynamic[result] = getAppliableRulesDynamic(result.tileName, worldRulesDynamic, result)
+						rulesDynamic[result] = getAppliableRulesDynamic(result.tileName, worldRulesDynamic, dynamicRuleApplyabilityCache, result)
 	if (ifOperatorUsed_cached(tile.tileName, "eat", rulesStatic[tile.tileName], rulesDynamic[tile])):
 		for rule in rulesStatic[tile.tileName] + rulesDynamic[tile]:
 			if (rule.has("eat")):
@@ -889,12 +908,11 @@ func pull_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic) -> bool:
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
 		return false
 	var pullableTiles = []
-	for pushedTile in tiles:
+	for pushedTile in solidTiles:
 		if (pushedTile.pos.x == oppositeX && pushedTile.pos.y == oppositeY):
-			if (is_tile_solid(pushedTile, rulesStatic, rulesDynamic)):
-				if (!can_be_pulled(pushedTile, delta_x, delta_y, rulesStatic, rulesDynamic)):
-					continue
-				pullableTiles.append(pushedTile)
+			if (!can_be_pulled(pushedTile, delta_x, delta_y, rulesStatic, rulesDynamic)):
+				continue
+			pullableTiles.append(pushedTile)
 	for pulledTile in pullableTiles:
 		pull_tile(pulledTile, delta_x, delta_y, rulesStatic, rulesDynamic)
 	tile.updatePos(newX, newY)
@@ -918,12 +936,11 @@ func can_be_pushed(tile, delta_x, delta_y, referenceTile, rulesStatic, rulesDyna
 		if (tile.tileType == 0 && !ifRuleActive_cached(tile.tileName, "is", "push", rulesStatic[tile.tileName], rulesDynamic[tile])):
 			return false
 	var swapMode = ifRuleActive_cached(tile.tileName, "is", "swap", rulesStatic[tile.tileName], rulesDynamic[tile])
-	for pushedTile in tiles:
+	for pushedTile in solidTiles:
 		if (pushedTile.pos.x == newX && pushedTile.pos.y == newY):
-			if (is_tile_solid(pushedTile, rulesStatic, rulesDynamic)):
-				if (!swapMode):
-					if (!can_be_pushed(pushedTile, delta_x, delta_y, tile, rulesStatic, rulesDynamic, moveMode, moveModeRule)):
-						return false
+			if (!swapMode):
+				if (!can_be_pushed(pushedTile, delta_x, delta_y, tile, rulesStatic, rulesDynamic, moveMode, moveModeRule)):
+					return false
 	return true
 
 func can_be_pulled(tile, delta_x, delta_y, rulesStatic, rulesDynamic) -> bool:
@@ -949,10 +966,13 @@ func is_tile_solid(tile, rulesStatic, rulesDynamic) -> bool:
 	return false
 
 func checkTheRules() -> void:
+	tiles.sort_custom(self, "tileSorter")
 	var worldRulesOld = worldRulesStatic
 	var worldRulesDynOld = worldRulesDynamic
+	var worldRulesDynOldCache = dynamicRuleApplyabilityCache
 	worldRulesStatic = {}
 	worldRulesDynamic = []
+	dynamicRuleApplyabilityCache = {}
 	var usedHorizontally = []
 	var usedVertically = []
 	for tile in tiles:
@@ -960,14 +980,14 @@ func checkTheRules() -> void:
 			changeTileType(tile, tile.tileId)
 	for tile in tiles:
 		if (!usedVertically.has(tile)):
-			checkTileRules(tile, worldRulesOld, worldRulesDynOld, true, usedVertically)
+			checkTileRules(tile, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, true, usedVertically)
 		if (!usedHorizontally.has(tile)):
-			checkTileRules(tile, worldRulesOld, worldRulesDynOld, false, usedHorizontally)
+			checkTileRules(tile, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, false, usedHorizontally)
 	rulesStatic = {}
 	for tile in tiles:
 		if (!rulesStatic.has(tile.tileName)):
 			rulesStatic[tile.tileName] = getAppliableRulesStatic(tile.tileName, worldRulesStatic, tile)
-		var rulesCacheDynamic = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, tile)
+		var rulesCacheDynamic = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, dynamicRuleApplyabilityCache, tile)
 		if (ifOperatorUsed_cached(tile.tileName, "is", rulesStatic[tile.tileName], rulesCacheDynamic)):
 			tile.isFloating = ifRuleActive_cached(tile.tileName, "is", "float", rulesStatic[tile.tileName], rulesCacheDynamic)
 			tile.isSleeping = ifRuleActive_cached(tile.tileName, "is", "sleep", rulesStatic[tile.tileName], rulesCacheDynamic)
@@ -997,7 +1017,7 @@ func checkTheRules() -> void:
 #	text_lonely
 #		rawType = 7
 
-func checkTileRules(tile, worldRulesOld, worldRulesDynOld, vertical, usedTilesGlobal) -> void:
+func checkTileRules(tile, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTilesGlobal) -> void:
 	var finalRule = []
 	var usedTiles = []
 	
@@ -1007,7 +1027,7 @@ func checkTileRules(tile, worldRulesOld, worldRulesDynOld, vertical, usedTilesGl
 	var endTile = null
 	finalRule.append([])
 	while true:
-		endTile = grabNoun(tile, finalRule[0], worldRulesOld, worldRulesDynOld, vertical, true, usedTiles)
+		endTile = grabNoun(tile, finalRule[0], worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, true, usedTiles)
 		if (endTile == null):
 			break
 		if (usedAnd != null):
@@ -1027,7 +1047,7 @@ func checkTileRules(tile, worldRulesOld, worldRulesDynOld, vertical, usedTilesGl
 		var newTile = null
 		for nounTile in tiles:
 			if (vertical && nounTile.pos == andTile.pos + Vector2.DOWN || !vertical && nounTile.pos == andTile.pos + Vector2.RIGHT):
-				if (nounTile.tileType == 1 || nounTile.tileType == 4 || nounTile.tileType == 7 || nounTile.tileType == 0 && ifRuleActiveRetro(nounTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, nounTile)):
+				if (nounTile.tileType == 1 || nounTile.tileType == 4 || nounTile.tileType == 7 || nounTile.tileType == 0 && ifRuleActiveRetro(nounTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, nounTile)):
 					newTile = nounTile
 					usedAnd = andTile
 					break
@@ -1058,7 +1078,7 @@ func checkTileRules(tile, worldRulesOld, worldRulesDynOld, vertical, usedTilesGl
 	tile = isTile
 	var andTile
 	while true:
-		endTile = grabProperty(tile, finalRule, vertical, usedTiles, isTileName, worldRulesOld, worldRulesDynOld)
+		endTile = grabProperty(tile, finalRule, vertical, usedTiles, isTileName, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache)
 		if (endTile == null):
 			break
 		if (andTile != null):
@@ -1085,10 +1105,10 @@ func checkTileRules(tile, worldRulesOld, worldRulesDynOld, vertical, usedTilesGl
 			changeTileType(tile, tile.tileId, true)
 			usedTilesGlobal.append(tile)
 
-func grabProperty(tile, container, vertical, usedTiles, isTileName, worldRulesOld, worldRulesDynOld) -> Node:
+func grabProperty(tile, container, vertical, usedTiles, isTileName, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache) -> Node:
 	for propTile in tiles:
 		if (vertical && propTile.pos == tile.pos + Vector2.DOWN || !vertical && propTile.pos == tile.pos + Vector2.RIGHT):
-			if (propTile.tileType == 3 || propTile.tileType == 1 || ifRuleActiveRetro(propTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, propTile)):
+			if (propTile.tileType == 3 || propTile.tileType == 1 || ifRuleActiveRetro(propTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, propTile)):
 				# is you
 				if (isTileName == ""):
 					container.append(propTile.tileName.split("_")[1])
@@ -1099,7 +1119,7 @@ func grabProperty(tile, container, vertical, usedTiles, isTileName, worldRulesOl
 			if (propTile.tileType == 4):
 				for propTile2 in tiles:
 					if (vertical && propTile2.pos == propTile.pos + Vector2.DOWN || !vertical && propTile2.pos == propTile.pos + Vector2.RIGHT):
-						if (propTile2.tileType == 3 || propTile.tileType == 1 || ifRuleActiveRetro(propTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, propTile)):
+						if (propTile2.tileType == 3 || propTile.tileType == 1 || ifRuleActiveRetro(propTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, propTile)):
 							# is not you
 							if (isTileName == ""):
 								container.append("not " + propTile2.tileName.split("_")[1])
@@ -1111,30 +1131,30 @@ func grabProperty(tile, container, vertical, usedTiles, isTileName, worldRulesOl
 				return null
 	return null
 
-func grabNoun(tile, container, worldRulesOld, worldRulesDynOld, vertical, conditionAllowed, usedTiles) -> Node:
-	if (tile.tileType == 1 || tile.tileType == 4 || tile.tileType == 7 || tile.tileType == 0 && ifRuleActiveRetro(tile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, tile)):
+func grabNoun(tile, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, conditionAllowed, usedTiles) -> Node:
+	if (tile.tileType == 1 || tile.tileType == 4 || tile.tileType == 7 || tile.tileType == 0 && ifRuleActiveRetro(tile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, tile)):
 		if (tile.tileType == 4):
 			for subTile in tiles:
 				if (vertical && subTile.pos == tile.pos + Vector2.DOWN || !vertical && subTile.pos == tile.pos + Vector2.RIGHT):
-					if (subTile.tileType == 1 || ifRuleActiveRetro(subTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, subTile)):
+					if (subTile.tileType == 1 || ifRuleActiveRetro(subTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, subTile)):
 						# not smh
 						container.append("not " + subTile.tileName.split("_")[1] if subTile.tileType == 1 else subTile.tileName)
 						usedTiles.append(tile)
 						usedTiles.append(subTile)
 						if (conditionAllowed):
-							return grabCondition(subTile, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+							return grabCondition(subTile, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 						return subTile
 					elif (subTile.tileType == 7):
 						for subTile2 in tiles:
 							if (vertical && subTile2.pos == subTile.pos + Vector2.DOWN || !vertical && subTile2.pos == subTile.pos + Vector2.RIGHT):
-								if (subTile2.tileType == 1 || ifRuleActiveRetro(subTile2.tileName, "is", "word", worldRulesOld, worldRulesDynOld, subTile2)):
+								if (subTile2.tileType == 1 || ifRuleActiveRetro(subTile2.tileName, "is", "word", worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, subTile2)):
 									# not lonely smh
 									container.append("not lonely " + subTile2.tileName.split("_")[1] if subTile2.tileType == 1 else subTile2.tileName)
 									usedTiles.append(tile)
 									usedTiles.append(subTile)
 									usedTiles.append(subTile2)
 									if (conditionAllowed):
-										return grabCondition(subTile2, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+										return grabCondition(subTile2, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 									return subTile2
 								if (subTile2.tileType == 4):
 									# not lonely not smh
@@ -1144,13 +1164,13 @@ func grabNoun(tile, container, worldRulesOld, worldRulesDynOld, vertical, condit
 		if (tile.tileType == 7):
 			for subTile in tiles:
 				if (vertical && subTile.pos == tile.pos + Vector2.DOWN || !vertical && subTile.pos == tile.pos + Vector2.RIGHT):
-					if (subTile.tileType == 1 || ifRuleActiveRetro(subTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, subTile)):
+					if (subTile.tileType == 1 || ifRuleActiveRetro(subTile.tileName, "is", "word", worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, subTile)):
 						# lonely smh
 						container.append("lonely " + subTile.tileName.split("_")[1] if subTile.tileType == 1 else subTile.tileName)
 						usedTiles.append(tile)
 						usedTiles.append(subTile)
 						if (conditionAllowed):
-							return grabCondition(subTile, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+							return grabCondition(subTile, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 						return subTile
 					if (subTile.tileType == 4):
 						# lonely not smh
@@ -1161,64 +1181,64 @@ func grabNoun(tile, container, worldRulesOld, worldRulesDynOld, vertical, condit
 		container.append(tile.tileName.split("_")[1] if tile.tileType == 1 else tile.tileName)
 		usedTiles.append(tile)
 		if (conditionAllowed):
-			return grabCondition(tile, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+			return grabCondition(tile, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 		return tile
 	return null
 
-func grabCondition(tile, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles) -> Node:
+func grabCondition(tile, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles) -> Node:
 	for subTile in tiles:
 		if (vertical && subTile.pos == tile.pos + Vector2.DOWN || !vertical && subTile.pos == tile.pos + Vector2.RIGHT):
 			if (subTile.tileType == 6):
 				if (subTile.tileName == "text_facing"):
 					container.append(subTile.tileName.split("_")[1])
-					var result = grabProperty(subTile, container, vertical, usedTiles, "", worldRulesOld, worldRulesDynOld)
+					var result = grabProperty(subTile, container, vertical, usedTiles, "", worldRulesOld, worldRulesDynOld, worldRulesDynOldCache)
 					if (result == null):
 						container.remove(container.size() - 1)
 					else:
 						usedTiles.append(subTile)
-						return grabConditionCheckForAdditional(result, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+						return grabConditionCheckForAdditional(result, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 				for subTile2 in tiles:
 					if (vertical && subTile2.pos == subTile.pos + Vector2.DOWN || !vertical && subTile2.pos == subTile.pos + Vector2.RIGHT):
 						container.append(subTile.tileName.split("_")[1])
-						var result = grabNoun(subTile2, container, worldRulesOld, worldRulesDynOld, vertical, false, usedTiles)
+						var result = grabNoun(subTile2, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, false, usedTiles)
 						if (result == null):
 							container.remove(container.size() - 1)
 							continue
 						usedTiles.append(subTile)
-						return grabConditionCheckForAdditional(result, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+						return grabConditionCheckForAdditional(result, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 			elif (subTile.tileType == 4):
 				for subTile3 in tiles:
 					if (vertical && subTile3.pos == subTile.pos + Vector2.DOWN || !vertical && subTile3.pos == subTile.pos + Vector2.RIGHT):
 						if (subTile3.tileType == 6):
 							if (subTile3.tileName == "text_facing"):
 								container.append("not " + subTile3.tileName.split("_")[1])
-								var result = grabProperty(subTile3, container, vertical, usedTiles, "", worldRulesOld, worldRulesDynOld)
+								var result = grabProperty(subTile3, container, vertical, usedTiles, "", worldRulesOld, worldRulesDynOld, worldRulesDynOldCache)
 								if (result == null):
 									container.remove(container.size() - 1)
 								else:
 									usedTiles.append(subTile3)
 									usedTiles.append(subTile)
-									return grabConditionCheckForAdditional(result, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+									return grabConditionCheckForAdditional(result, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 							for subTile2 in tiles:
 								if (vertical && subTile2.pos == subTile3.pos + Vector2.DOWN || !vertical && subTile2.pos == subTile3.pos + Vector2.RIGHT):
 									container.append("not " + subTile3.tileName.split("_")[1])
-									var result = grabNoun(subTile2, container, worldRulesOld, worldRulesDynOld, vertical, false, usedTiles)
+									var result = grabNoun(subTile2, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, false, usedTiles)
 									if (result == null):
 										container.remove(container.size() - 1)
 										continue
 									usedTiles.append(subTile3)
 									usedTiles.append(subTile)
-									return grabConditionCheckForAdditional(result, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+									return grabConditionCheckForAdditional(result, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 	return tile
 
-func grabConditionCheckForAdditional(tile, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles) -> Node:
+func grabConditionCheckForAdditional(tile, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles) -> Node:
 	for andTile in tiles:
 		if (vertical && andTile.pos == tile.pos + Vector2.DOWN || !vertical && andTile.pos == tile.pos + Vector2.RIGHT):
 			if (andTile.tileType == 5):
 				for subTile in tiles:
 					if (vertical && subTile.pos == andTile.pos + Vector2.DOWN || !vertical && subTile.pos == andTile.pos + Vector2.RIGHT):
 						if (subTile.tileType == 6):
-							var result = grabCondition(andTile, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+							var result = grabCondition(andTile, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 							if (result != andTile):
 								usedTiles.append(andTile)
 								return result
@@ -1226,7 +1246,7 @@ func grabConditionCheckForAdditional(tile, container, worldRulesOld, worldRulesD
 							for subTile2 in tiles:
 								if (vertical && subTile2.pos == subTile.pos + Vector2.DOWN || !vertical && subTile2.pos == subTile.pos + Vector2.RIGHT):
 									if (subTile2.tileType == 6):
-										var result = grabCondition(andTile, container, worldRulesOld, worldRulesDynOld, vertical, usedTiles)
+										var result = grabCondition(andTile, container, worldRulesOld, worldRulesDynOld, worldRulesDynOldCache, vertical, usedTiles)
 										if (result != andTile):
 											usedTiles.append(andTile)
 											return result
@@ -1259,6 +1279,28 @@ func applyRule(finalRule) -> bool:
 			var action = actions[actionNum].split(" ", false)
 			if (ruleDynamic):
 				var newRule = [affectedTiles[tileNum]]
+				if "not " in newRule[0]:
+					if (newRule[0] == "not all"):
+						continue
+					else:
+						var notWhat = newRule[0].replace("not " , "")
+						for tile in tiles:
+							if (tile.tileName == notWhat):
+								continue
+							if (!dynamicRuleApplyabilityCache.has(tile.tileName)):
+								dynamicRuleApplyabilityCache[tile.tileName] = []
+							if (!dynamicRuleApplyabilityCache[tile.tileName].has(worldRulesDynamic.size())):
+								dynamicRuleApplyabilityCache[tile.tileName].append(worldRulesDynamic.size())
+				elif (newRule[0] == "all" || newRule[0] == "level"):
+					for tile in tiles:
+						if (!dynamicRuleApplyabilityCache.has(tile.tileName)):
+							dynamicRuleApplyabilityCache[tile.tileName] = []
+						if (!dynamicRuleApplyabilityCache[tile.tileName].has(worldRulesDynamic.size())):
+							dynamicRuleApplyabilityCache[tile.tileName].append(worldRulesDynamic.size())
+				else:
+					if (!dynamicRuleApplyabilityCache.has(newRule[0])):
+						dynamicRuleApplyabilityCache[newRule[0]] = []
+					dynamicRuleApplyabilityCache[newRule[0]].append(worldRulesDynamic.size())
 				for cond in condition:
 					newRule.append(cond)
 				newRule.append(action[0])
@@ -1311,6 +1353,7 @@ func applyRuleInstantly(affectedTile, operator, action) -> bool:
 					unappliedRules = true
 					worldRulesStatic = {}
 					worldRulesDynamic = []
+					dynamicRuleApplyabilityCache = {}
 				else:
 					for subTile in tiles:
 						if (subTile.tileName == affectedTile):
@@ -1348,10 +1391,10 @@ func applyRuleInstantly(affectedTile, operator, action) -> bool:
 	return true
 
 func ifRuleActive(tile_name, operator, action, tile) -> bool:
-	return ifRuleActiveRetro(tile_name, operator, action, worldRulesStatic, worldRulesDynamic, tile)
+	return ifRuleActiveRetro(tile_name, operator, action, worldRulesStatic, worldRulesDynamic, dynamicRuleApplyabilityCache, tile)
 
-func ifRuleActiveRetro(tile_name, operator, action, worldRules, worldRulesDyn, tile) -> bool:
-	return ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, getAppliableRulesStatic(tile_name, worldRules, tile), getAppliableRulesDynamic(tile_name, worldRulesDyn, tile))
+func ifRuleActiveRetro(tile_name, operator, action, worldRules, worldRulesDyn, worldRulesDynCache, tile) -> bool:
+	return ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, getAppliableRulesStatic(tile_name, worldRules, tile), getAppliableRulesDynamic(tile_name, worldRulesDyn, worldRulesDynCache, tile))
 
 # worldRulesDynamic have:
 # - on
@@ -1378,13 +1421,17 @@ func getAppliableRulesStatic(tile_name, worldRules, tile) -> Array:
 	
 	return appliableRules
 
-func getAppliableRulesDynamic(tile_name, worldRulesDyn, tile) -> Array:
+func getAppliableRulesDynamic(tile_name, worldRulesDyn, applyability, tile) -> Array:
 	var appliableRules = []
 	
-	if ("text_" in tile_name):
+	if tile.tileType != 0:
 		tile_name = "text"
 	
-	for rule in worldRulesDyn:
+	if (!applyability.has(tile_name)):
+		return appliableRules
+	
+	for ruleNum in applyability[tile_name]:
+		var rule = worldRulesDyn[ruleNum]
 		var affectedTile;
 		var lonelyType = -1
 		if "not lonely " in rule[0]:
@@ -1393,15 +1440,6 @@ func getAppliableRulesDynamic(tile_name, worldRulesDyn, tile) -> Array:
 		elif "lonely " in rule[0]:
 			affectedTile = rule[0].replace("lonely ", "")
 			lonelyType = 0
-		else:
-			affectedTile = rule[0]
-		if "not " in affectedTile:
-			var notWhat = affectedTile.replace("not " , "")
-			if (notWhat == tile_name || notWhat == "all"):
-				continue
-		else:
-			if (affectedTile != tile_name && affectedTile != "all" && affectedTile != "level"):
-				continue
 		if (lonelyType != -1):
 			if (!isTileLonely(tile, lonelyType)):
 				continue
@@ -1516,10 +1554,10 @@ func isTileLonely(tile, lonelyType) -> bool:
 	return true
 
 func ifOperatorUsed(tile_name, operator, tile) -> String:
-	return ifOperatorUsed_cached(tile_name, operator, getAppliableRulesStatic(tile_name, worldRulesStatic, tile), getAppliableRulesDynamic(tile_name, worldRulesDynamic, tile))
+	return ifOperatorUsed_cached(tile_name, operator, getAppliableRulesStatic(tile_name, worldRulesStatic, tile), getAppliableRulesDynamic(tile_name, worldRulesDynamic, dynamicRuleApplyabilityCache, tile))
 
 func getRuleStackValue(tile_name, operator, action, tile) -> int:
-	return getRuleStackValue_cached(tile_name, operator, action, getAppliableRulesStatic(tile_name, worldRulesStatic, tile), getAppliableRulesDynamic(tile_name, worldRulesDynamic, tile))
+	return getRuleStackValue_cached(tile_name, operator, action, getAppliableRulesStatic(tile_name, worldRulesStatic, tile), getAppliableRulesDynamic(tile_name, worldRulesDynamic, dynamicRuleApplyabilityCache, tile))
 
 func ifOperatorUsed_cached(tile_name, operator, appliableStaticRules, appliableDynamicRules) -> String:
 	
@@ -1538,21 +1576,26 @@ func ifOperatorUsed_cached(tile_name, operator, appliableStaticRules, appliableD
 func ifRuleActive_cached(tile_name, operator, action, appliableStaticRules, appliableDynamicRules) -> bool:
 	return ifRuleActiveRetro_cached(tile_name, operator, action, worldRulesStatic, worldRulesDynamic, appliableStaticRules, appliableDynamicRules)
 
-func ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, appliableStaticRules, appliableDynamicRules) -> bool:	
-	if !("not " in action):
-		for rule in appliableStaticRules:
-			if (rule.has(operator) && rule[operator].has("not " + action)):
-				return false
-		for rule in appliableDynamicRules:
-			if (rule.has(operator) && rule[operator].has("not " + action)):
-				return false
-		
+func ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, appliableStaticRules, appliableDynamicRules) -> bool:
+	
 	for rule in appliableStaticRules:
 		if (rule.has(operator) && rule[operator].has(action)):
+			for rule in appliableStaticRules:
+				if (rule.has(operator) && rule[operator].has("not " + action)):
+					return false
+			for rule in appliableDynamicRules:
+				if (rule.has(operator) && rule[operator].has("not " + action)):
+					return false
 			return true
-			
+	
 	for rule in appliableDynamicRules:
 		if (rule.has(operator) && rule[operator].has(action)):
+			for rule in appliableStaticRules:
+				if (rule.has(operator) && rule[operator].has("not " + action)):
+					return false
+			for rule in appliableDynamicRules:
+				if (rule.has(operator) && rule[operator].has("not " + action)):
+					return false
 			return true
 	
 	return false
@@ -1560,13 +1603,13 @@ func ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRule
 func getRuleStackValue_cached(tile_name, operator, action, appliableStaticRules, appliableDynamicRules) -> int:
 	var value = 0
 
-	if !("not " in action):
-		for rule in appliableStaticRules:
-			if (rule.has(operator) && rule[operator].has("not " + action)):
-				return 0
-		for rule in appliableDynamicRules:
-			if (rule.has(operator) && rule[operator].has("not " + action)):
-				return 0
+	for rule in appliableStaticRules:
+		if (rule.has(operator) && rule[operator].has("not " + action)):
+			return 0
+	
+	for rule in appliableDynamicRules:
+		if (rule.has(operator) && rule[operator].has("not " + action)):
+			return 0
 
 	for rule in appliableStaticRules:
 		if (rule.has(operator) && rule[operator].has(action)):

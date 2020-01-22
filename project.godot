@@ -17,10 +17,14 @@ _global_script_class_icons={
 
 config/name="babaisyou-clone"
 run/main_scene="res://src/main.tscn"
+run/disable_stdout=true
+run/disable_stderr=true
+boot_splash/fullsize=false
 config/icon="res://icon.png"
 
 [debug]
 
+settings/profiler/max_functions=128
 gdscript/warnings/enable=false
 
 [display]
@@ -51,6 +55,12 @@ texture={
 "svg/scale": 1.0
 }
 
+[physics]
+
+common/physics_fps=1
+3d/active_soft_world=false
+common/enable_object_picking=false
+
 [rendering]
 
 quality/driver/driver_name="GLES2"
@@ -60,14 +70,24 @@ quality/2d/use_pixel_snap=true
 threads/thread_model=2
 vram_compression/import_etc=true
 vram_compression/import_etc2=false
+quality/directional_shadow/size=256
+quality/directional_shadow/size.mobile=256
+quality/shadow_atlas/size=256
+quality/shadow_atlas/size.mobile=256
 quality/shadow_atlas/quadrant_0_subdiv=0
 quality/shadow_atlas/quadrant_1_subdiv=0
 quality/shadow_atlas/quadrant_2_subdiv=0
 quality/shadow_atlas/quadrant_3_subdiv=0
+quality/shadows/filter_mode=0
 quality/reflections/texture_array_reflections=false
 quality/reflections/high_quality_ggx=false
+quality/shading/force_vertex_shading=true
+quality/shading/force_lambert_over_burley=true
+quality/shading/force_blinn_over_ggx=true
 quality/depth_prepass/enable=false
 environment/default_clear_color=Color( 0, 0, 0, 1 )
+quality/reflections/atlas_size=0
+quality/reflections/atlas_subdiv=0
 quality/depth/hdr=false
 environment/default_environment="res://default_env.tres"
 quality/dynamic_fonts/use_oversampling=false
