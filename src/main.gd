@@ -533,7 +533,7 @@ func loadLevel(levelNum) -> void:
 				file2.store_32(compressedSize)
 				for p in range(0, compressedSize):
 					file2.store_8(file.get_8())
-				file2.store_16(0x00000000)
+				file2.store_32(0x00000000)
 				file2.store_32(0x46504347)
 				file2.close()
 				var err = file2.open_compressed(levelDatabase + "swap", File.READ, 1)
