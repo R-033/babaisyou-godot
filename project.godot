@@ -15,7 +15,7 @@ _global_script_class_icons={
 
 [application]
 
-config/name="babaisyou-clone"
+config/name="baba is clone"
 run/main_scene="res://src/main.tscn"
 run/disable_stdout=true
 run/disable_stderr=true
@@ -31,6 +31,7 @@ gdscript/warnings/enable=false
 
 window/size/width=640
 window/size/height=480
+window/vsync/use_vsync=false
 
 [importer_defaults]
 

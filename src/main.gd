@@ -11,44 +11,52 @@ extends Node
 # todo empty
 # todo bonus
 
-var loaded
+var levelDatabase = "/Volumes/File Tank/Projects/babaisyou-levels/"
+var currentLevel = 0
 
+var barriers
 var tiles = []
-var solidTiles = []
-var tilingMode3Tiles = []
+var solidTiles
+var tilingMode3Tiles
 
-var worldRulesStatic = {}
-var worldRulesDynamic = []
-var dynamicRuleApplyabilityCache = {}
+var worldRulesStatic
+var worldRulesDynamic
+var dynamicRuleApplyabilityCache
 
-var rulesStatic = {}
+var rulesStatic
 
-var worldWidth = 10
-var worldHeight = 10
+var worldWidth
+var worldHeight
 
-var worldLerpTime = 1
-var worldAnimationFrame = 0
+var worldLerpTime
+var worldAnimationFrame
 
 var animtimer = 0
 
-var unappliedMovement = null
-var unappliedRules = false
-var unappliedAutoTile = false
+var unappliedMovement
+var unappliedRules
+var unappliedAutoTile
 
 onready var tilePrefab = preload("res://src/tile.tscn")
 
 var database
-var loadedSprites = {}
+var loadedSprites
 var palette
 
-var controlsActive = true
+var controlsActive
 
 var startTime = OS.get_ticks_msec()
 var curTime = startTime
 
+var musicPlayer
+var soundPlayer
+var noisePlayer
+var you_found
+
 func test_pong() -> void:
 	worldWidth = 27
 	worldHeight = 23
+	loadPalette("default.png")
 	
 	spawnTileByName(0, 0, 0, "text_orb")
 	spawnTileByName(1, 0, 0, "text_is")
@@ -197,12 +205,18 @@ func test_pong() -> void:
 func test_syntax() -> void:
 	worldWidth = 21
 	worldHeight = 15
+	loadPalette("default.png")
 	
 	spawnTileByName(0, 0, 0, "text_baba")
-	spawnTileByName(1, 0, 0, "text_is")
-	spawnTileByName(2, 0, 0, "text_you")
+	spawnTileByName(1, 0, 0, "text_on")
+	spawnTileByName(2, 0, 0, "text_rock")
+	spawnTileByName(3, 0, 0, "text_is")
+	spawnTileByName(4, 0, 0, "text_wall")
+	spawnTileByName(0, 1, 0, "text_is")
+	spawnTileByName(0, 2, 0, "text_you")
 	
-	spawnTileByName(3, 0, 0, "baba")
+	spawnTileByName(2, 2, 0, "baba")
+	spawnTileByName(3, 2, 0, "rock")
 	
 	for y in range(0, worldHeight):
 		for x in range(0, worldWidth):
@@ -211,6 +225,7 @@ func test_syntax() -> void:
 func test_paint() -> void:
 	worldWidth = 12
 	worldHeight = 12
+	loadPalette("default.png")
 	
 	spawnTileByName(0, 0, 0, "text_love")
 	spawnTileByName(1, 0, 0, "text_make")
@@ -260,26 +275,122 @@ func test_paint() -> void:
 	spawnTileByName(6, 3, 0, "keke")
 	spawnTileByName(6, 4, 0, "love")
 
+func test_secret() -> void:
+	worldWidth = 14
+	worldHeight = 14
+	loadPalette("variant.png")
+	
+	spawnTileByName(0, 0, 0, "text_baba")
+	spawnTileByName(1, 0, 0, "text_on")
+	spawnTileByName(2, 0, 0, "text_wall")
+	spawnTileByName(3, 0, 0, "text_and")
+	spawnTileByName(4, 0, 0, "text_text")
+	spawnTileByName(5, 0, 0, "text_and")
+	spawnTileByName(6, 0, 0, "text_baba")
+	spawnTileByName(7, 0, 0, "text_and")
+	spawnTileByName(8, 0, 0, "text_rock")
+	spawnTileByName(9, 0, 0, "text_and")
+	spawnTileByName(10, 0, 0, "text_flag")
+	spawnTileByName(11, 0, 0, "text_is")
+	spawnTileByName(12, 0, 0, "text_win")
+	spawnTileByName(13, 0, 0, "hedge")
+	
+	spawnTileByName(0, 1, 0, "text_is")
+	spawnTileByName(1, 1, 0, "hedge")
+	spawnTileByName(2, 1, 0, "text_is")
+	for x in range(3, 14):
+		spawnTileByName(x, 1, 0, "hedge")
+
+	spawnTileByName(0, 2, 0, "text_you")
+	spawnTileByName(1, 2, 0, "hedge")
+	spawnTileByName(2, 2, 0, "text_stop")
+	spawnTileByName(3, 2, 0, "hedge")
+
+	for x in range(0, 4):
+		spawnTileByName(x, 3, 0, "hedge")
+
+	for x in range(8, 13):
+		spawnTileByName(x, 3, 0, "wall")
+
+	spawnTileByName(0, 4, 0, "text_hedge")
+	spawnTileByName(1, 4, 0, "text_is")
+	spawnTileByName(2, 4, 0, "text_stop")
+	spawnTileByName(3, 4, 0, "hedge")
+
+	for x in range(0, 4):
+		spawnTileByName(x, 5, 0, "hedge")
+	
+	spawnTileByName(5, 5, 0, "flag")
+	
+	spawnTileByName(10, 5, 2, "baba")
+
+	for x in range(8, 13):
+		spawnTileByName(x, 7, 0, "wall")
+
+	for y in range(4, 7):
+		spawnTileByName(12, y, 0, "wall")
+	
+	spawnTileByName(8, 4, 0, "wall")
+	spawnTileByName(8, 6, 0, "wall")
+	
+	spawnTileByName(3, 10, 0, "text_baba")
+	
+	spawnTileByName(5, 10, 0, "text_rock")
+	spawnTileByName(6, 10, 0, "text_is")
+	spawnTileByName(7, 10, 0, "text_push")
+	
+	spawnTileByName(10, 10, 0, "rock")
+	
+	spawnTileByName(3, 12, 0, "text_on")
+	
+	spawnTileByName(6, 12, 0, "text_wall")
+	spawnTileByName(7, 12, 0, "text_is")
+	spawnTileByName(8, 12, 0, "text_shift")
+	
+	spawnTileByName(10, 12, 0, "rock")
+
 func _ready():
 	
 	database = load("res://src/database.gd").tiles
+	musicPlayer = get_node("/root/root/Music")
+	soundPlayer = get_node("/root/root/Sound")
+	noisePlayer = get_node("/root/root/Noise")
 	
-	#loadLevel(0)
-	
-	loadPalette("default.png")
-	
-	#test_pong()
-	
-	test_syntax()
-	
-	#test_paint()
-	
+	# todo load music with palette
+	loadMusic("baba.ogg")
+	loadLevel(currentLevel)
+	postLoadAction()
+
+func preLoadAction() -> void:
+	for tile in tiles:
+		remove_child(tile)
+	barriers = {}
+	tiles = []
+	solidTiles = []
+	tilingMode3Tiles = []
+	worldRulesStatic = {}
+	worldRulesDynamic = []
+	dynamicRuleApplyabilityCache = {}
+	rulesStatic = {}
+	you_found = true
+	controlsActive = true
+	loadedSprites = {}
+	unappliedAutoTile = false
+	unappliedRules = false
+	unappliedMovement = null
+	worldAnimationFrame = 0
+	worldLerpTime = 1
+
+func postLoadAction() -> void:
+	# applying camera stuff
 	var cam = get_node("/root/root/Camera2D")
 	cam.position = Vector2(round(float(worldWidth * 24) / 2.0), round(float(worldHeight * 24) / 2.0))
 	var display_size = OS.get_screen_size()
 	var zoom = clamp(max(worldWidth, worldHeight) / (min(display_size.x, display_size.y) / 22), 0.5, 1)
 	cam.zoom = Vector2.ONE * zoom
 	OS.set_window_size(Vector2(worldWidth * 24 * (1 / zoom), worldHeight * 24 * (1 / zoom)))
+	
+	print("game is start")
 	
 	if (unappliedRules):
 		unappliedRules = false
@@ -295,42 +406,204 @@ func updateAutoTile() -> void:
 			applyAutoTile(tile)
 
 func loadLevel(levelNum) -> void:
-		
+	preLoadAction()
+	
+	print("parsing level " + str(levelNum) + " config")
+	# load metadata
 	var level = ConfigFile.new()
-	var err = level.load("res://levels/" + str(levelNum) + "level.ld")
-	if err == OK:
-		
-		loadPalette(level.get_value("general", "palette"))
-		
-		var changedTiles = level.get_value("tiles", "changed").split(",", false)
-		for changedTile in changedTiles:
-			if (!database.has(changedTile)):
-				database[changedTile] = {}
-			if (level.has_section_key(changedTile + "_image")):
-				database[changedTile]["sprite"] = level.get_value(changedTile + "_image")
-			if (level.has_section_key(changedTile + "_name")):
-				database[changedTile]["name"] = level.get_value(changedTile + "_name")
-			if (level.has_section_key(changedTile + "_unittype")):
-				database[changedTile]["unittype"] = level.get_value(changedTile + "_unittype")
-			if (level.has_section_key(changedTile + "_type")):
-				database[changedTile]["type"] = level.get_value(changedTile + "_type")
-			if (level.has_section_key(changedTile + "_tiling")):
-				database[changedTile]["tiling"] = level.get_value(changedTile + "_tiling")
-			if (level.has_section_key(changedTile + "_colour")):
-				database[changedTile]["colour"] = level.get_value(changedTile + "_colour")
-			if (level.has_section_key(changedTile + "_activecolour")):
-				database[changedTile]["ative"] = level.get_value(changedTile + "_activecolour")
-			if (level.has_section_key(changedTile + "_argextra")):
-				database[changedTile]["argextra"] = level.get_value(changedTile + "_argextra")
-			# perhaps more?
-
-		var objectCount = level.get_value("general", "currobjlist_total")
-		#for objectNum in range(1, objectCount + 1):
-		#	var pos = [0, 0]
-		#	var direction = 0
-		#	spawnTile(pos[0], pos[1], direction, level.get_value("currobjlist", str(objectNum) + "object"))
-	else:
-		push_error("error loading level " + str(levelNum) + ": " + str(err))
+	var file = File.new()
+	file.open(levelDatabase + str(levelNum) + "level.ld", File.READ)
+	var currentGroup = ""
+	for line in file.get_as_text().split("\n"):
+		if (line.length() == 0):
+			continue
+		if (line[0] == "["):
+			currentGroup = line.replace("[", "").replace("]", "")
+		else:
+			if !("=" in line):
+				continue
+			var content = line.split("=")[1]
+			if (content.length() != 0):
+				if "," in content:
+					var subentries = content.split(",", false)
+					content = []
+					for entry in subentries:
+						if (entry[0] != "-" && entry[0] != "0" && entry[0] != "1" && entry[0] != "2" && entry[0] != "3" && entry[0] != "4" && entry[0] != "5" && entry[0] != "6" && entry[0] != "7" && entry[0] != "8" && entry[0] != "9"):
+							content.append(entry)
+						else:
+							content.append(int(entry))
+				elif (content[0] != "-" && content[0] != "0" && content[0] != "1" && content[0] != "2" && content[0] != "3" && content[0] != "4" && content[0] != "5" && content[0] != "6" && content[0] != "7" && content[0] != "8" && content[0] != "9"):
+					pass
+				else:
+					content = int(content)
+			level.set_value(currentGroup, line.split("=")[0], content)
+	file.close()
+	
+	var levelName = level.get_value("general", "name", "")
+	var levelDesc = level.get_value("general", "subtitle", "")
+	push_error("level " + levelName + ": " + levelDesc)
+	
+	loadPalette(level.get_value("general", "palette"))
+	
+	var objectCount = level.get_value("general", "currobjlist_total", 0)
+	var curobjlist = []
+	for objectNum in range(1, objectCount + 1):
+		var obj = {}
+		obj["id"] = level.get_value("currobjlist", str(objectNum) + "id")
+		obj["name"] = level.get_value("currobjlist", str(objectNum) + "name")
+		obj["object"] = level.get_value("currobjlist", str(objectNum) + "object")
+		obj["gox"] = level.get_value("currobjlist", str(objectNum) + "gox")
+		obj["goy"] = level.get_value("currobjlist", str(objectNum) + "goy")
+		obj["gfx"] = level.get_value("currobjlist", str(objectNum) + "gfx")
+		obj["gfy"] = level.get_value("currobjlist", str(objectNum) + "gfy")
+		obj["pair"] = level.get_value("currobjlist", str(objectNum) + "pair")
+		curobjlist.append(obj)
+	
+	var changedTiles = level.get_value("tiles", "changed")
+	for changedTile in changedTiles:
+		if (!database.has(changedTile)):
+			database[changedTile] = {}
+		if (level.has_section_key("tiles", changedTile + "_image")):
+			database[changedTile]["sprite"] = level.get_value("tiles", changedTile + "_image")
+		if (level.has_section_key("tiles", changedTile + "_name")):
+			database[changedTile]["name"] = level.get_value("tiles", changedTile + "_name")
+		if (level.has_section_key("tiles", changedTile + "_unittype")):
+			database[changedTile]["unittype"] = level.get_value("tiles", changedTile + "_unittype")
+		if (level.has_section_key("tiles", changedTile + "_type")):
+			database[changedTile]["type"] = level.get_value("tiles", changedTile + "_type")
+		if (level.has_section_key("tiles", changedTile + "_tiling")):
+			database[changedTile]["tiling"] = level.get_value("tiles", changedTile + "_tiling")
+		if (level.has_section_key("tiles", changedTile + "_colour")):
+			database[changedTile]["colour"] = level.get_value("tiles", changedTile + "_colour")
+		if (level.has_section_key("tiles", changedTile + "_activecolour")):
+			database[changedTile]["active"] = level.get_value("tiles", changedTile + "_activecolour")
+		if (level.has_section_key("tiles", changedTile + "_argextra")):
+			database[changedTile]["argextra"] = level.get_value("tiles", changedTile + "_argextra")
+		if (level.has_section_key("tiles", changedTile + "_tile")):
+			database[changedTile]["tile"] = level.get_value("tiles", changedTile + "_tile")
+	
+	print("parsing binary")
+	# code ported from https://github.com/ShootMe/BabaIsYouEditor
+	file = File.new()
+	file.open(levelDatabase + str(levelNum) + "level.l", File.READ)
+	
+	if (file.get_64() != 0x21474e5554484341): # ACHTUNG
+		push_error("invalid map file?")
+	
+	var version = file.get_16()
+	if (version < 256 || version > 261):
+		push_error("unsupported map version")
+	
+	var file_size = file.get_len()
+	while (file.get_position() < file_size):
+		var blockHeader = file.get_32()
+		file.get_32()
+		if (blockHeader == 0x2050414d): # MAP
+			file.get_16()
+		elif (blockHeader == 0x5259414c): # LAYR
+			var ids = []
+			var directions = []
+			var layerCount = file.get_16()
+			for i in range(0, layerCount):
+				worldWidth = file.get_32()
+				worldHeight = file.get_32()
+				if (version >= 258):
+					file.get_32()
+				for j in range(0, 25):
+					file.get_8()
+				if (version == 260):
+					file.get_16()
+				elif (version == 261):
+					file.get_16()
+					file.get_8()
+				var size = worldWidth * worldHeight
+				var dataBlocks = file.get_8()
+				if (dataBlocks < 1 || dataBlocks > 2):
+					push_error("invalid data block count")
+				# MAIN
+				file.get_32()
+				var compressedSize = file.get_32()
+				var nextPosition = file.get_position() + compressedSize
+				var file2 = File.new()
+				file2.open(levelDatabase + "swap", File.WRITE)
+				file2.store_32(0x46504347)
+				file2.store_32(0x00000001)
+				file2.store_32(0x00001000)
+				file2.store_32(size * 2)
+				file2.store_32(compressedSize)
+				for p in range(0, compressedSize):
+					file2.store_8(file.get_8())
+				file2.store_16(0x00000000)
+				file2.store_32(0x46504347)
+				file2.close()
+				var err = file2.open_compressed(levelDatabase + "swap", File.READ, 1)
+				if (err != OK):
+					push_error("decompressing error " + str(err))
+					return
+				while (file2.get_position() < size * 2):
+					ids.append(file2.get_16())
+				file2.close()
+				file.seek(nextPosition)
+				if (dataBlocks == 2):
+					# DATA
+					for j in range(0, 9):
+						file.get_8()
+					compressedSize = file.get_32()
+					nextPosition = file.get_position() + compressedSize
+					file2 = File.new()
+					file2.open(levelDatabase + "swap", File.WRITE)
+					file2.store_32(0x46504347)
+					file2.store_32(0x00000001)
+					file2.store_32(0x00001000)
+					file2.store_32(size)
+					file2.store_32(compressedSize)
+					for p in range(0, compressedSize):
+						file2.store_8(file.get_8())
+					file2.store_16(0x00000000)
+					file2.store_32(0x46504347)
+					file2.close()
+					err = file2.open_compressed(levelDatabase + "swap", File.READ, 1)
+					if (err != OK):
+						push_error("decompressing error " + str(err))
+						return
+					var results = []
+					while (file2.get_position() < size):
+						directions.append(file2.get_8())
+					file2.close()
+					file.seek(nextPosition)
+				var dir = Directory.new()
+				dir.remove(levelDatabase + "swap")
+			
+			var x = 0
+			var y = 0
+			
+			for idNum in range(0, worldWidth * worldHeight):
+				var curTile = null
+				if (ids[idNum] == 0):
+					if (!barriers.has(x)):
+						barriers[x] = []
+					barriers[x].append(y)
+				elif (ids[idNum] == 65535):
+					pass
+				else:
+					for tile in database.keys():
+						var database_entry = database[tile]
+						var id = ((database_entry["tile"][1] << 8) | database_entry["tile"][0])
+						if (id == ids[idNum]):
+							curTile = tile
+							break
+					if (curTile != null):
+						spawnTile(x, y, directions[idNum], curTile)
+				x += 1
+				if (x >= worldWidth):
+					x = 0
+					y += 1
+	
+	file.close()
+	
+	print("loading done")
+	
+	postLoadAction()
 
 func loadPalette(fileName) -> void:
 	if (palette != null):
@@ -338,10 +611,18 @@ func loadPalette(fileName) -> void:
 	palette = load("res://palettes/" + fileName).get_data()
 	palette.lock()
 	VisualServer.set_default_clear_color(palette.get_pixel(6, 4))
+	print("palette changed to " + fileName)
+
+func loadMusic(fileName) -> void:
+	musicPlayer.stream = load("res://music/" + fileName)
+	musicPlayer.playing = true;
+	print("music changed to " + fileName)
 
 func _process(delta):
 	curTime = OS.get_ticks_msec() - startTime
-	animtimer += delta
+	animtimer += min(delta, 0.2)
+	musicPlayer.volume_db = lerp(musicPlayer.volume_db, 0 if you_found else -80, min(delta * 2, 1))
+	noisePlayer.volume_db = -musicPlayer.volume_db - 80
 	if (animtimer > 0.2):
 		animtimer -= 0.2
 		worldAnimationFrame += 1
@@ -352,20 +633,17 @@ func _process(delta):
 	if (worldLerpTime < 1):
 		worldLerpTime += delta * 10
 
-var palettes = ["default.png", "abstract.png", "autumn.png", "contrast.png", "factory.png", "garden.png", "marshmallow.png", "mono.png", "mountain.png", "ocean.png", "ruins.png", "space.png", "swamp.png", "test.png", "variant.png", "volcano.png"]
-var curpal = 0
-
 func _input(ev):
+	if (Input.is_key_pressed(KEY_1) && currentLevel > 0):
+		currentLevel -= 1
+		loadLevel(currentLevel)
+		return
+	elif (Input.is_key_pressed(KEY_2) && currentLevel < 329):
+		currentLevel += 1
+		loadLevel(currentLevel)
+		return
 	if (worldLerpTime < 1 || !controlsActive):
 		return
-	if Input.is_key_pressed(KEY_P):
-		curpal += 1
-		if (curpal > palettes.size() - 1):
-			curpal = 0
-		loadPalette(palettes[curpal])
-		for tile in tiles:
-			changeTileType(tile, tile.tileId)
-		checkTheRules()
 	if Input.is_key_pressed(KEY_SPACE):
 		unappliedMovement = Vector2.ZERO
 	elif Input.is_key_pressed(KEY_RIGHT):
@@ -402,9 +680,9 @@ func changeTileType(tile, name, forceLightUp = false) -> void:
 	tile.tileName = database[name]["name"]
 	tile.tileId = name
 	
-	tile.isFloating = ifRuleActive(tile.tileName, "is", "float", tile)
-	tile.isSleeping = ifRuleActive(tile.tileName, "is", "sleep", tile)
-	tile.visible = !ifRuleActive(tile.tileName, "is", "hide", tile)
+	tile.isFloating = ifRuleActive(tile.tileName, "is", "float", tile, false)
+	tile.isSleeping = ifRuleActive(tile.tileName, "is", "sleep", tile, false)
+	tile.visible = !ifRuleActive(tile.tileName, "is", "hide", tile, false)
 	
 	var rawType = database[name]["type"]
 	if (rawType == 0):
@@ -476,19 +754,20 @@ func changeTileType(tile, name, forceLightUp = false) -> void:
 func loadSprite(name, spriteName) -> void:
 	loadedSprites[name].append([load("res://sprites/" + spriteName + "_1.png"), load("res://sprites/" + spriteName + "_2.png"), load("res://sprites/" + spriteName + "_3.png")])
 
-func destroyTile(tile, forced = false) -> bool:
-	if (!forced && ifRuleActive(tile.tileName, "is", "safe", tile)):
+func destroyTile(tile, forced = false, replace = true) -> bool:
+	if (!forced && ifRuleActive(tile.tileName, "is", "safe", tile, false)):
 		return false
-	var hasReplacement = ifOperatorUsed(tile.tileName, "has", tile)
-	if (hasReplacement != ""):
-		changeTileType(tile, findTileId(hasReplacement))
-		return false
+	if (replace):
+		var hasReplacement = ifOperatorUsed(tile.tileName, "has", tile)
+		if (hasReplacement != ""):
+			changeTileType(tile, findTileId(hasReplacement))
+			return false
 	if (tile.tileType != 0):
 		unappliedRules = true
 	if (tile.tilingMode == 1):
 		unappliedAutoTile = true
 	elif (tile.tilingMode == 3):
-		tilingMode3Tiles.earse(tile)
+		tilingMode3Tiles.erase(tile)
 	tiles.erase(tile)
 	remove_child(tile)
 	return true
@@ -551,28 +830,37 @@ func updateWorld() -> void:
 			tile.isFloating = false
 			tile.isSleeping = false
 			tile.visible = true
+			if (tile.tileType != 0):
+				solidTiles.append(tile)
 	for tile in tilesTrimmed:
 		rs = rulesStatic[tile.tileName]
 		rd = rulesDynamic[tile]
-		if (ifRuleActive_cached(tile.tileName, "is", "you", rs, rd) && !tile.isSleeping && unappliedMovement != Vector2.ZERO):
-			if (ifRuleActive_cached(tile.tileName, "is", "up", rs, rd)):
-				push_tile(tile, 0, -1, rulesStatic, rulesDynamic, true, "you")
-			elif (ifRuleActive_cached(tile.tileName, "is", "down", rs, rd)):
-				push_tile(tile, 0, 1, rulesStatic, rulesDynamic, true, "you")
-			elif (ifRuleActive_cached(tile.tileName, "is", "left", rs, rd)):
-				push_tile(tile, -1, 0, rulesStatic, rulesDynamic, true, "you")
-			elif (ifRuleActive_cached(tile.tileName, "is", "right", rs, rd)):
-				push_tile(tile, 1, 0, rulesStatic, rulesDynamic, true, "you")
-			else:
-				push_tile(tile, unappliedMovement.x, unappliedMovement.y, rulesStatic, rulesDynamic, true, "you")
+		if (ifRuleActive_cached(tile.tileName, "is", "you", rs, rd)):
+			if (!tile.isSleeping && unappliedMovement != Vector2.ZERO):
+				you_found = true
+				if (ifRuleActive_cached(tile.tileName, "is", "up", rs, rd)):
+					push_tile(tile, 0, -1, rulesStatic, rulesDynamic, true, "you")
+				elif (ifRuleActive_cached(tile.tileName, "is", "down", rs, rd)):
+					push_tile(tile, 0, 1, rulesStatic, rulesDynamic, true, "you")
+				elif (ifRuleActive_cached(tile.tileName, "is", "left", rs, rd)):
+					push_tile(tile, -1, 0, rulesStatic, rulesDynamic, true, "you")
+				elif (ifRuleActive_cached(tile.tileName, "is", "right", rs, rd)):
+					push_tile(tile, 1, 0, rulesStatic, rulesDynamic, true, "you")
+				else:
+					push_tile(tile, unappliedMovement.x, unappliedMovement.y, rulesStatic, rulesDynamic, true, "you")
 	if (unappliedRules):
 		unappliedRules = false
 		checkTheRules()
 	tilesTrimmed = []
+	solidTiles = []
 	for tile in tiles:
 		rulesDynamic[tile] = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, dynamicRuleApplyabilityCache, tile)
 		if (rulesStatic[tile.tileName].size() > 0 || rulesDynamic[tile].size() > 0):
 			tilesTrimmed.append(tile)
+			if (is_tile_solid(tile, rulesStatic, rulesDynamic)):
+				solidTiles.append(tile)
+		elif (tile.tileType != 0):
+			solidTiles.append(tile)
 	for tile in tilesTrimmed:
 		rs = rulesStatic[tile.tileName]
 		rd = rulesDynamic[tile]
@@ -822,11 +1110,13 @@ func yeet_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic) -> void:
 func push_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic, moveMode = false, moveModeRule = "move") -> bool:
 	if (ifRuleActive_cached(tile.tileName, "is", "fall", rulesStatic[tile.tileName], rulesDynamic[tile]) && delta_y < 0):
 		return false
-	var newX = tile.pos.x + delta_x
-	var newY = tile.pos.y + delta_y
-	var oppositeX = tile.pos.x - delta_x
-	var oppositeY = tile.pos.y - delta_y
+	var newX = int(tile.pos.x + delta_x)
+	var newY = int(tile.pos.y + delta_y)
+	var oppositeX = int(tile.pos.x - delta_x)
+	var oppositeY = int(tile.pos.y - delta_y)
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
+		return false
+	if (barriers.has(newX) && barriers[newX].has(newY)):
 		return false
 	var swapMode = ifRuleActive_cached(tile.tileName, "is", "swap", rulesStatic[tile.tileName], rulesDynamic[tile])
 	var weakMode = ifRuleActive_cached(tile.tileName, "is", "weak", rulesStatic[tile.tileName], rulesDynamic[tile])
@@ -901,11 +1191,13 @@ func postMovementUpdate(tile, rulesStatic, rulesDynamic) -> void:
 								continue
 
 func pull_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic) -> bool:
-	var newX = tile.pos.x + delta_x
-	var newY = tile.pos.y + delta_y
-	var oppositeX = tile.pos.x - delta_x
-	var oppositeY = tile.pos.y - delta_y
+	var newX = int(tile.pos.x + delta_x)
+	var newY = int(tile.pos.y + delta_y)
+	var oppositeX = int(tile.pos.x - delta_x)
+	var oppositeY = int(tile.pos.y - delta_y)
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
+		return false
+	if (barriers.has(newX) && barriers[newX].has(newY)):
 		return false
 	var pullableTiles = []
 	for pushedTile in solidTiles:
@@ -926,9 +1218,11 @@ func pull_tile(tile, delta_x, delta_y, rulesStatic, rulesDynamic) -> bool:
 	return true
 
 func can_be_pushed(tile, delta_x, delta_y, referenceTile, rulesStatic, rulesDynamic, moveMode = false, moveModeRule = "move") -> bool:
-	var newX = tile.pos.x + delta_x
-	var newY = tile.pos.y + delta_y
+	var newX = int(tile.pos.x + delta_x)
+	var newY = int(tile.pos.y + delta_y)
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
+		return false
+	if (barriers.has(newX) && barriers[newX].has(newY)):
 		return false
 	if (!moveMode || !ifRuleActive_cached(tile.tileName, "is", moveModeRule, rulesStatic[tile.tileName], rulesDynamic[tile])):
 		if (ifRuleActive_cached(tile.tileName, "is", "stop", rulesStatic[tile.tileName], rulesDynamic[tile])):
@@ -944,9 +1238,11 @@ func can_be_pushed(tile, delta_x, delta_y, referenceTile, rulesStatic, rulesDyna
 	return true
 
 func can_be_pulled(tile, delta_x, delta_y, rulesStatic, rulesDynamic) -> bool:
-	var newX = tile.pos.x + delta_x
-	var newY = tile.pos.y + delta_y
+	var newX = int(tile.pos.x + delta_x)
+	var newY = int(tile.pos.y + delta_y)
 	if (newX < 0 || newX > worldWidth - 1 || newY < 0 || newY > worldHeight - 1):
+		return false
+	if (barriers.has(newX) && barriers[newX].has(newY)):
 		return false
 	if (ifRuleActive_cached(tile.tileName, "is", "stop", rulesStatic[tile.tileName], rulesDynamic[tile])):
 		return false
@@ -975,6 +1271,7 @@ func checkTheRules() -> void:
 	dynamicRuleApplyabilityCache = {}
 	var usedHorizontally = []
 	var usedVertically = []
+	you_found = false
 	for tile in tiles:
 		if (tile.tileType != 0):
 			changeTileType(tile, tile.tileId)
@@ -988,10 +1285,11 @@ func checkTheRules() -> void:
 		if (!rulesStatic.has(tile.tileName)):
 			rulesStatic[tile.tileName] = getAppliableRulesStatic(tile.tileName, worldRulesStatic, tile)
 		var rulesCacheDynamic = getAppliableRulesDynamic(tile.tileName, worldRulesDynamic, dynamicRuleApplyabilityCache, tile)
-		if (ifOperatorUsed_cached(tile.tileName, "is", rulesStatic[tile.tileName], rulesCacheDynamic)):
-			tile.isFloating = ifRuleActive_cached(tile.tileName, "is", "float", rulesStatic[tile.tileName], rulesCacheDynamic)
-			tile.isSleeping = ifRuleActive_cached(tile.tileName, "is", "sleep", rulesStatic[tile.tileName], rulesCacheDynamic)
-			tile.visible = !ifRuleActive_cached(tile.tileName, "is", "hide", rulesStatic[tile.tileName], rulesCacheDynamic)
+		if (!rulesStatic.has(tile.tileName)):
+			rulesStatic[tile.tileName] = getAppliableRulesStatic(tile.tileName, worldRulesStatic, tile)
+		tile.isFloating = ifRuleActive_cached(tile.tileName, "is", "float", rulesStatic[tile.tileName], rulesCacheDynamic)
+		tile.isSleeping = ifRuleActive_cached(tile.tileName, "is", "sleep", rulesStatic[tile.tileName], rulesCacheDynamic)
+		tile.visible = !ifRuleActive_cached(tile.tileName, "is", "hide", rulesStatic[tile.tileName], rulesCacheDynamic)
 
 #finalRule = [
 #	[
@@ -1269,8 +1567,16 @@ func applyRule(finalRule) -> bool:
 				condition.append(affectedTiles[tileNum + subpos + 2])
 				subpos += 2
 				ruleDynamic = true
-				if (tileNum + subpos >= affectedTiles.size() - 2):
+				if (tileNum + subpos >= affectedTiles.size() - 1):
 					break
+				while (affectedTiles[tileNum + subpos + 1] != "on" && affectedTiles[tileNum + subpos +1] != "near" && affectedTiles[tileNum + subpos + 1] != "facing" && affectedTiles[tileNum + subpos + 1] != "not on" && affectedTiles[tileNum + subpos + 1] != "not near" && affectedTiles[tileNum + subpos + 1] != "not facing"):
+					condition.append(affectedTiles[tileNum + subpos + 1])
+					subpos += 1
+					if (tileNum + subpos >= affectedTiles.size() - 1):
+						break
+				if (tileNum + subpos >= affectedTiles.size() - 1):
+					break
+			#push_error("condition: " + str(condition))
 		
 		if "lonely" in affectedTiles[tileNum]:
 			ruleDynamic = true
@@ -1306,7 +1612,6 @@ func applyRule(finalRule) -> bool:
 				newRule.append(action[0])
 				newRule.append(actions[actionNum].replace(action[0] + " ", ""))
 				worldRulesDynamic.append(newRule)
-				# todo applyRuleInstantly
 			else:
 				if (!saveRuleStatic(affectedTiles[tileNum], action[0], actions[actionNum].replace(action[0] + " ", ""))):
 					return false
@@ -1331,7 +1636,7 @@ func saveRuleStatic(tile_name, operator, action) -> bool:
 	
 	return true
 
-func applyRuleInstantly(affectedTile, operator, action) -> bool:
+func applyRuleInstantly(affectedTile, operator, action, checkAdditional = true, tileInstance = null) -> bool:
 	# todo not support here
 	var ifReplacement = false
 	var tid = findTileId("text_" + action)
@@ -1342,7 +1647,9 @@ func applyRuleInstantly(affectedTile, operator, action) -> bool:
 			if (affectedTile != action):
 				if (affectedTile == "text"):
 					for subTile in tiles:
-						if (ifRuleActive(affectedTile, "is", affectedTile, subTile)):
+						if (tileInstance != null && subTile != tileInstance):
+							continue
+						if (ifRuleActive(affectedTile, "is", affectedTile, subTile, checkAdditional)):
 							continue
 						if (subTile.tileType != 0):
 							if action == "text":
@@ -1356,23 +1663,34 @@ func applyRuleInstantly(affectedTile, operator, action) -> bool:
 					dynamicRuleApplyabilityCache = {}
 				else:
 					for subTile in tiles:
+						if (tileInstance != null && subTile != tileInstance):
+							continue
 						if (subTile.tileName == affectedTile):
 							if action == "text":
 								changeTileType(subTile, findTileId("text_" + affectedTile))
+							elif (action == "empty"):
+								destroyTile(subTile, true, false)
 							else:
 								changeTileType(subTile, findTileId(action))
 							subTile.updateSpriteAnim()
 		else:
 			# probably won't work as I want but ok
 			for subTile in tiles:
+				if (tileInstance != null && subTile != tileInstance):
+					continue
 				if (affectedTile == "all" || affectedTile == "level" || subTile.tileName == affectedTile):
-					if (action == "win" && ifRuleActive(affectedTile, "is", "you", subTile) || action == "you" && ifRuleActive(affectedTile, "is", "win", subTile)):
+					if (action == "you"):
+						you_found = true
+						if (ifRuleActive(affectedTile, "is", "win", subTile, checkAdditional)):
+							controlsActive = false
+					elif (action == "win" && ifRuleActive(affectedTile, "is", "you", subTile, checkAdditional)):
+						you_found = true
 						controlsActive = false
-					elif (action == "defeat" && ifRuleActive(affectedTile, "is", "you", subTile) || action == "you" && ifRuleActive(affectedTile, "is", "defeat", subTile)):
+					elif (action == "defeat" && ifRuleActive(affectedTile, "is", "you", subTile, checkAdditional) || action == "you" && ifRuleActive(affectedTile, "is", "defeat", subTile, checkAdditional)):
 						destroyTile(subTile)
-					elif (action == "hot" && ifRuleActive(affectedTile, "is", "melt", subTile) || action == "melt" && ifRuleActive(affectedTile, "is", "hot", subTile)):
+					elif (action == "hot" && ifRuleActive(affectedTile, "is", "melt", subTile, checkAdditional) || action == "melt" && ifRuleActive(affectedTile, "is", "hot", subTile, checkAdditional)):
 						destroyTile(subTile)
-					elif (action == "shut" && ifRuleActive(affectedTile, "is", "open", subTile) || action == "open" && ifRuleActive(affectedTile, "is", "shut", subTile)):
+					elif (action == "shut" && ifRuleActive(affectedTile, "is", "open", subTile, checkAdditional) || action == "open" && ifRuleActive(affectedTile, "is", "shut", subTile, checkAdditional)):
 						destroyTile(subTile)
 					elif (action == "up"):
 						subTile.direction = 1
@@ -1390,11 +1708,11 @@ func applyRuleInstantly(affectedTile, operator, action) -> bool:
 						destroyTile(subTile)
 	return true
 
-func ifRuleActive(tile_name, operator, action, tile) -> bool:
-	return ifRuleActiveRetro(tile_name, operator, action, worldRulesStatic, worldRulesDynamic, dynamicRuleApplyabilityCache, tile)
+func ifRuleActive(tile_name, operator, action, tile, checkAdditional = true) -> bool:
+	return ifRuleActiveRetro(tile_name, operator, action, worldRulesStatic, worldRulesDynamic, dynamicRuleApplyabilityCache, tile, checkAdditional)
 
-func ifRuleActiveRetro(tile_name, operator, action, worldRules, worldRulesDyn, worldRulesDynCache, tile) -> bool:
-	return ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, getAppliableRulesStatic(tile_name, worldRules, tile), getAppliableRulesDynamic(tile_name, worldRulesDyn, worldRulesDynCache, tile))
+func ifRuleActiveRetro(tile_name, operator, action, worldRules, worldRulesDyn, worldRulesDynCache, tile, checkAdditional = true) -> bool:
+	return ifRuleActiveRetro_cached(tile_name, operator, action, worldRules, worldRulesDyn, getAppliableRulesStatic(tile_name, worldRules, tile), getAppliableRulesDynamic(tile_name, worldRulesDyn, worldRulesDynCache, tile, checkAdditional))
 
 # worldRulesDynamic have:
 # - on
@@ -1415,13 +1733,15 @@ func getAppliableRulesStatic(tile_name, worldRules, tile) -> Array:
 			var notWhat = ruleNoun.replace("not " , "")
 			if (notWhat != tile_name && notWhat != "all"):
 				appliableRules.append(worldRules[ruleNoun])
+				#push_error(tile_name + ": " + str(worldRules[ruleNoun]))
 		else:
 			if (ruleNoun == tile_name || ruleNoun == "all" || ruleNoun == "level"):
 				appliableRules.append(worldRules[ruleNoun])
+				#push_error(tile_name + ": " + str(worldRules[ruleNoun]))
 	
 	return appliableRules
 
-func getAppliableRulesDynamic(tile_name, worldRulesDyn, applyability, tile) -> Array:
+func getAppliableRulesDynamic(tile_name, worldRulesDyn, applyability, tile, checkAdditional = true) -> Array:
 	var appliableRules = []
 	
 	if tile.tileType != 0:
@@ -1445,100 +1765,111 @@ func getAppliableRulesDynamic(tile_name, worldRulesDyn, applyability, tile) -> A
 				continue
 		var conditionOffset = 1
 		var passed = true
+		var carriedRule = false
+		var conditionText
 		while true:
-			var conditionText = rule[conditionOffset]
+			if (!carriedRule):
+				conditionText = rule[conditionOffset]
 			var conditionInversed = "not " in conditionText
 			if (conditionInversed):
 				conditionText = conditionText.replace("not ", "")
 			if (conditionText == "on" || conditionText == "near" || conditionText == "facing"):
 				lonelyType = -1
-				if "not lonely " in rule[conditionOffset + 1]:
-					affectedTile = rule[conditionOffset + 1].replace("not lonely ", "")
-					lonelyType = 1
-				elif "lonely " in rule[conditionOffset + 1]:
-					affectedTile = rule[conditionOffset + 1].replace("lonely ", "")
-					lonelyType = 0
-				else:
-					affectedTile = rule[conditionOffset + 1]
-				var conditionPassed = false
-				if (conditionText == "facing" && (("left" in affectedTile) || ("right" in affectedTile) || ("up" in affectedTile) || ("down" in affectedTile))):
-					if ("not " in affectedTile):
-						if ("left" in affectedTile):
-							if (tile.direction == 2):
-								passed = false
-								break
-						if ("right" in affectedTile):
-							if (tile.direction == 0):
-								passed = false
-								break
-						if ("up" in affectedTile):
-							if (tile.direction == 1):
-								passed = false
-								break
-						if ("down" in affectedTile):
-							if (tile.direction == 3):
-								passed = false
-								break
+				var affectedCollecion = []
+				while (conditionOffset + 1 < rule.size() - 2):
+					if (rule[conditionOffset + 1] == "on" || rule[conditionOffset + 1] == "near" || rule[conditionOffset + 1] == "facing" || rule[conditionOffset + 1] == "not on" || rule[conditionOffset + 1] == "not near" || rule[conditionOffset + 1] == "not facing"):
+						break
+					affectedCollecion.append(rule[conditionOffset + 1])
+					conditionOffset += 1
+				for affectedTile_ in affectedCollecion:
+					if "not lonely " in affectedTile_:
+						affectedTile = affectedTile_.replace("not lonely ", "")
+						lonelyType = 1
+					elif "lonely " in affectedTile_:
+						affectedTile = affectedTile_.replace("lonely ", "")
+						lonelyType = 0
 					else:
-						if ("left" in affectedTile):
-							if (tile.direction != 2):
-								passed = false
-								break
-						if ("right" in affectedTile):
-							if (tile.direction != 0):
-								passed = false
-								break
-						if ("up" in affectedTile):
-							if (tile.direction != 1):
-								passed = false
-								break
-						if ("down" in affectedTile):
-							if (tile.direction != 3):
-								passed = false
-								break
-					conditionPassed = true
-				
-				if (!conditionPassed):
-					for subTile in tiles:
-						if ((("not " in affectedTile) && subTile.tileName != affectedTile.replace("not ", "") && affectedTile.replace("not ", "") != "all") || (!("not " in affectedTile) && (affectedTile == "all" || subTile.tileName == affectedTile))):
-							if (conditionText == "on"):
-								if (subTile.pos != tile.pos):
-									continue
-							elif (conditionText == "near"):
-								if (subTile.pos.x == tile.pos.x - 1 && (subTile.pos.y == tile.pos.y - 1 || subTile.pos.y == tile.pos.y + 1 || subTile.pos.y == tile.pos.y)):
-									pass
-								elif (subTile.pos.x == tile.pos.x && (subTile.pos.y == tile.pos.y - 1 || subTile.pos.y == tile.pos.y + 1)):
-									pass
-								elif (subTile.pos.x == tile.pos.x + 1 && (subTile.pos.y == tile.pos.y - 1 || subTile.pos.y == tile.pos.y + 1 || subTile.pos.y == tile.pos.y)):
-									pass
-								else:
-									continue
-							elif (conditionText == "facing"):
-								if (subTile.pos.x == tile.pos.x - 1 && subTile.pos.y == tile.pos.y):
-									if (tile.direction != 2):
+						affectedTile = affectedTile_
+					var conditionPassed = false
+					if (conditionText == "facing" && (("left" in affectedTile) || ("right" in affectedTile) || ("up" in affectedTile) || ("down" in affectedTile))):
+						if ("not " in affectedTile):
+							if ("left" in affectedTile):
+								if (tile.direction == 2):
+									passed = false
+									break
+							if ("right" in affectedTile):
+								if (tile.direction == 0):
+									passed = false
+									break
+							if ("up" in affectedTile):
+								if (tile.direction == 1):
+									passed = false
+									break
+							if ("down" in affectedTile):
+								if (tile.direction == 3):
+									passed = false
+									break
+						else:
+							if ("left" in affectedTile):
+								if (tile.direction != 2):
+									passed = false
+									break
+							if ("right" in affectedTile):
+								if (tile.direction != 0):
+									passed = false
+									break
+							if ("up" in affectedTile):
+								if (tile.direction != 1):
+									passed = false
+									break
+							if ("down" in affectedTile):
+								if (tile.direction != 3):
+									passed = false
+									break
+						conditionPassed = true
+					if (!conditionPassed):
+						for subTile in tiles:
+							if ((("not " in affectedTile) && subTile.tileName != affectedTile.replace("not ", "") && affectedTile.replace("not ", "") != "all") || (!("not " in affectedTile) && (affectedTile == "all" || subTile.tileName == affectedTile))):
+								if (conditionText == "on"):
+									if (subTile.pos != tile.pos):
 										continue
-								elif (subTile.pos.x == tile.pos.x && subTile.pos.y == tile.pos.y + 1):
-									if (tile.direction != 3):
+								elif (conditionText == "near"):
+									if (subTile.pos.x == tile.pos.x - 1 && (subTile.pos.y == tile.pos.y - 1 || subTile.pos.y == tile.pos.y + 1 || subTile.pos.y == tile.pos.y)):
+										pass
+									elif (subTile.pos.x == tile.pos.x && (subTile.pos.y == tile.pos.y - 1 || subTile.pos.y == tile.pos.y + 1)):
+										pass
+									elif (subTile.pos.x == tile.pos.x + 1 && (subTile.pos.y == tile.pos.y - 1 || subTile.pos.y == tile.pos.y + 1 || subTile.pos.y == tile.pos.y)):
+										pass
+									else:
 										continue
-								elif (subTile.pos.x == tile.pos.x && subTile.pos.y == tile.pos.y - 1):
-									if (tile.direction != 1):
+								elif (conditionText == "facing"):
+									if (subTile.pos.x == tile.pos.x - 1 && subTile.pos.y == tile.pos.y):
+										if (tile.direction != 2):
+											continue
+									elif (subTile.pos.x == tile.pos.x && subTile.pos.y == tile.pos.y + 1):
+										if (tile.direction != 3):
+											continue
+									elif (subTile.pos.x == tile.pos.x && subTile.pos.y == tile.pos.y - 1):
+										if (tile.direction != 1):
+											continue
+									elif (subTile.pos.x == tile.pos.x + 1 && subTile.pos.y == tile.pos.y):
+										if (tile.direction != 0):
+											continue
+									else:
 										continue
-								elif (subTile.pos.x == tile.pos.x + 1 && subTile.pos.y == tile.pos.y):
-									if (tile.direction != 0):
+								if (lonelyType != -1):
+									if (!isTileLonely(subTile, lonelyType)):
 										continue
-								else:
-									continue
-							if (lonelyType != -1):
-								if (!isTileLonely(subTile, lonelyType)):
-									continue
-							conditionPassed = true
-							break
-				if (conditionInversed):
-					conditionPassed = !conditionPassed
-				if (!conditionPassed):
-					passed = false
+								conditionPassed = true
+								break
+					if (conditionInversed):
+						conditionPassed = !conditionPassed
+					if (!conditionPassed):
+						passed = false
+						break
+				if (!passed):
 					break
-				conditionOffset += 2
+				conditionOffset += affectedCollecion.size()
 			else:
 				break
 		if (passed):
@@ -1546,12 +1877,13 @@ func getAppliableRulesDynamic(tile_name, worldRulesDyn, applyability, tile) -> A
 			newRule[rule[conditionOffset]] = {}
 			newRule[rule[conditionOffset]][rule[conditionOffset + 1]] = 1
 			appliableRules.append(newRule)
-			applyRuleInstantly(tile_name, rule[conditionOffset], rule[conditionOffset + 1])
+			if (checkAdditional):
+				applyRuleInstantly(tile_name, rule[conditionOffset], rule[conditionOffset + 1], false, tile)
 	return appliableRules
 
 # stub
 func isTileLonely(tile, lonelyType) -> bool:
-	return true
+	return true # todo
 
 func ifOperatorUsed(tile_name, operator, tile) -> String:
 	return ifOperatorUsed_cached(tile_name, operator, getAppliableRulesStatic(tile_name, worldRulesStatic, tile), getAppliableRulesDynamic(tile_name, worldRulesDynamic, dynamicRuleApplyabilityCache, tile))
