@@ -8,9 +8,12 @@ script = ExtResource( 1 )
 
 [node name="Camera2D" type="Camera2D" parent="."]
 current = true
-zoom = Vector2( 0.5, 0.5 )
 drag_margin_h_enabled = false
 drag_margin_v_enabled = false
+drag_margin_left = 0.0
+drag_margin_top = 0.0
+drag_margin_right = 0.0
+drag_margin_bottom = 0.0
 
 [node name="Noise" type="AudioStreamPlayer" parent="."]
 stream = ExtResource( 2 )
@@ -20,3 +23,16 @@ autoplay = true
 [node name="Sound" type="AudioStreamPlayer" parent="."]
 
 [node name="Music" type="AudioStreamPlayer" parent="."]
+
+[node name="BG" type="ColorRect" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Prev" type="Button" parent="UI"]
+margin_right = 117.0
+margin_bottom = 48.0
+
+[node name="Next" type="Button" parent="UI"]
+margin_left = 119.526
+margin_right = 236.526
+margin_bottom = 48.0

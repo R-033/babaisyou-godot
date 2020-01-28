@@ -24,7 +24,7 @@ func updatePos(x, y) -> void:
 	oldPos = pos
 	pos = newPos
 	needsToMoved = true
-	if ((tilingMode == 2 || tilingMode == 3) != (oldPos == pos) && main.worldLerpTime != 1):
+	if ((tilingMode == 2 || tilingMode == 3 || tilingMode == 0) != (oldPos == pos) && main.worldLerpTime != 1):
 		var oldDir = direction
 		direction = 0 if (pos.x == oldPos.x + 1) else 2 if (pos.x == oldPos.x - 1) else 3 if (pos.y == oldPos.y + 1) else 1 if (pos.y == oldPos.y - 1) else -1
 		if (direction == -1):
@@ -52,6 +52,8 @@ func updateSpriteAnim() -> void:
 			xpos = direction * 4 + atlasCurrentWalkFrame
 	elif (tilingMode == 3):
 		xpos = direction * 4 + atlasCurrentWalkFrame
+	elif (tilingMode == 0):
+		xpos = direction
 	else:
 		xpos = 0
 	texture = main.loadedSprites[tileId][xpos][main.worldAnimationFrame]
